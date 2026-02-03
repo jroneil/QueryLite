@@ -1,0 +1,38 @@
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Project specific
+.env
+.env.local
+.env.test
+.env.production
+!.env.example
+
+# Docker
+.docker_data/
+postgres_data/
+
+# Logs
+*.log
+logs/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+
+# Node
+node_modules/
+.next/
+dist/
+build/

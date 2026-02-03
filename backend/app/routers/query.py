@@ -43,7 +43,8 @@ async def execute_natural_language_query(
     # ... rest of the logic remains similar but with user scope ...
     try:
         connection_string = decrypt_connection_string(data_source.connection_string_encrypted)
-        executor = QueryExecutor(connection_string)
+        # Pass data_source_id for caching and enhanced schema lookup
+        executor = QueryExecutor(connection_string, data_source_id=str(data_source.id))
         schema_info = executor.get_schema_info()
         table_names = executor.get_table_names()
         
@@ -57,6 +58,21 @@ async def execute_natural_language_query(
         sql_result = llm_service.generate_sql(request.question, schema_info, table_names)
         if not sql_result.sql_query:
             raise HTTPException(status_code=400, detail=f"LLM Error: {sql_result.explanation}")
+
+        # Check for confidence
+        settings = get_settings()
+        if sql_result.confidence < settings.confidence_threshold:
+            return QueryResponse(
+                sql_query=sql_result.sql_query,
+                explanation=sql_result.explanation,
+                results=[],
+                row_count=0,
+                chart_recommendation=ChartRecommendation(chart_type="table"),
+                execution_time_ms=0,
+                confidence=sql_result.confidence,
+                requires_confirmation=True,
+                refinement_suggestion=llm_service.refine_query(request.question, "", schema_info)
+            )
             
         results, execution_time = executor.execute_query(sql_result.sql_query)
         chart_recommendation = executor.recommend_chart_type(results)
@@ -79,7 +95,8 @@ async def execute_natural_language_query(
             results=results,
             row_count=len(results),
             chart_recommendation=chart_recommendation,
-            execution_time_ms=execution_time
+            execution_time_ms=execution_time,
+            confidence=sql_result.confidence
         )
     except HTTPException: raise
     except Exception as e: raise HTTPException(status_code=500, detail=str(e))

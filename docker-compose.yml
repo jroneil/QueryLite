@@ -1,8 +1,6 @@
-version: '3.8'
-
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:17-alpine
     container_name: querylite-db
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-querylite}
@@ -13,10 +11,39 @@ services:
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U querylite"]
+      test: [ "CMD-SHELL", "pg_isready -U querylite" ]
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - querylite-network
+
+  pagila_db:
+    image: postgres:17-alpine
+    container_name: pagila_instance
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: pagila
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./pagila-init:/docker-entrypoint-initdb.d
+      - pagila_data:/var/lib/postgresql/data
+    networks:
+      - querylite-network
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: querylite-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+      - pagila_db
     networks:
       - querylite-network
 
@@ -25,10 +52,13 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: querylite-backend
+    env_file:
+      - .env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-querylite}:${POSTGRES_PASSWORD:-querylite_secret}@postgres:5432/${POSTGRES_DB:-querylite}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-your-openai-api-key-here}
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-dev-encryption-key-32chars!!}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      LLM_PROVIDER: ${LLM_PROVIDER:-openai}
     ports:
       - "8000:8000"
     depends_on:
@@ -44,8 +74,13 @@ services:
       context: ./frontend/querylite-fe
       dockerfile: Dockerfile
     container_name: querylite-frontend
+    env_file:
+      - .env
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000
+      INTERNAL_API_URL: http://backend:8000
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
     ports:
       - "3000:3000"
     depends_on:
@@ -59,6 +94,8 @@ services:
 
 volumes:
   postgres_data:
+  pagila_data:
+
 
 networks:
   querylite-network:

@@ -117,6 +117,7 @@ class SQLGenerationResult(BaseModel):
     sql_query: str
     explanation: str
     confidence: float = Field(..., ge=0.0, le=1.0)
+    requires_confirmation: bool = False
 
 
 class ChartRecommendation(BaseModel):
@@ -136,6 +137,9 @@ class QueryResponse(BaseModel):
     row_count: int
     chart_recommendation: ChartRecommendation
     execution_time_ms: float
+    confidence: float
+    requires_confirmation: bool = False
+    refinement_suggestion: Optional[str] = None
 
 
 class SchemaInfo(BaseModel):

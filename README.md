@@ -12,53 +12,71 @@ QueryLite is a Micro-SaaS MVP that bridges the gap between your data and actiona
 
 No SQL knowledge required. Just ask, and see your data come to life.
 
-## 🚀 Roadmap: Phase 1 (In Progress)
+## 🚀 Roadmap
 
-We are currently enhancing QueryLite with the following features:
-
-- **Authentication**: Secure login with Google (OAuth) and Email/Password.
+### Phase 1: Core Foundation (Completed)
+- **Authentication**: Secure login with NextAuth.js and OAuth providers.
 - **Multi-Tenancy**: Private workspaces for users to manage their own data sources.
 - **Query History**: Automatically track and re-run past queries.
-- **Saved Queries**: Bookmark your favorite insights for quick access.
-- **Advanced Export**: Export data to CSV and share SQL queries easily.
-- **Enhanced Visuals**: More chart types and customization options.
+- **Saved Queries**: Bookmark favorite insights for quick access.
+- **Export**: Export data to CSV.
 
-See the full [Phase 1 Plan](docs/phase_1_plan.md) for details.
+### Phase 2: Intelligence & Reliability (Completed)
+- **Multi-LLM Support**: Seamlessly switch between OpenAI (GPT-4), Anthropic (Claude 3.5 Sonnet), and local models (LLama 3 via Ollama).
+- **Schema Intelligence**: Automatic relationship detection (Foreign Keys) and semantic type inference for better SQL generation.
+- **Reliability Suite**: Integrated query timeouts, rate limiting, and connection pooling for production readiness.
+- **Confidence Engine**: Real-time confidence scoring with automatic refinement suggestions for low-confidence queries.
+- **Custom Error Handling**: Graceful, user-friendly messaging for complex SQL errors and database timeouts.
+
+See the [Phase 2 Implementation Plan](docs/phase_2_plan.md) for technical details.
 
 ---
 
 ## Tech Stack
 
-- **Frontend**: Next.js 16 (App Router), Tailwind CSS, shadcn/ui, Tremor
-- **Backend**: Python FastAPI
-- **Database**: PostgreSQL
-- **LLM**: OpenAI GPT-4 (placeholder - configure API key to enable)
+- **Frontend**: Next.js 15+ (App Router), Tailwind CSS 4, shadcn/ui, Tremor
+- **Backend**: Python FastAPI (Async)
+- **Database**: PostgreSQL 17
+- **LLM**: Multi-provider support (OpenAI, Anthropic, Ollama)
 
-## Quick Start
+## 🚀 Quick Start
 
-### Prerequisites
+### 1. Prerequisites
 
 - Docker and Docker Compose
-- OpenAI API key (optional, for NL-to-SQL feature)
+- OpenAI or Anthropic API key (optional, for NL-to-SQL feature)
 
-### Setup
+### 2. Setup & Launch
 
-1. **Clone and configure environment:**
-   ```bash
-   cd QueryLite
-   cp .env.example .env
-   # Edit .env and add your OPENAI_API_KEY
-   ```
+```bash
+# Clone and configure environment
+cp .env.example .env
 
-2. **Start all services with Docker:**
-   ```bash
-   docker-compose up --build
-   ```
+# Start all services
+docker-compose up --build -d
+```
 
-3. **Access the application:**
-   - Frontend: http://localhost:3000
-   - Backend API: http://localhost:8000
-   - API Docs: http://localhost:8000/docs
+### 3. Access & Login
+
+- **App**: [http://localhost:3000](http://localhost:3000)
+- **Demo Login**: Use the "Use Demo Account" button on the login page (or `admin@example.com` / `password`).
+- **Admin**: [http://localhost:5050](http://localhost:5050) (pgAdmin - `admin@example.com` / `admin`)
+
+---
+
+## 🧪 Testing with Pagila (Sample Dataset)
+
+QueryLite includes a dedicated **Pagila** instance to test intelligence right out of the box.
+
+1.  **Add Data Source**: In the dashboard, click "Add Data Source".
+2.  **Connect**: Use the internal connection string:
+    `postgresql://postgres:password123@pagila_db:5432/pagila`
+3.  **Run Tests**: Head to the "Query" page and try these:
+    - *"Show monthly rental count trends"* (Tests area charts)
+    - *"How many films are in each category?"* (Tests joins & bar charts)
+    - *"Top 10 customers by total spend"* (Tests complex aggregations)
+
+See the full [Pagila Test Plan](docs/TEST_PLAN_PAGILA.md) for more scenarios.
 
 ## Development (Without Docker)
 
@@ -93,14 +111,21 @@ DATABASE_URL=postgresql://querylite:querylite_secret@localhost:5432/querylite
 - **Natural Language Queries**: Ask questions like "Show monthly revenue trends" 
 - **Auto-Visualization**: Automatically selects Bar, Line, or Donut charts based on data structure
 - **SQL Preview**: View the generated SQL before execution
+- **Multi-LLM Support**: Switch between OpenAI (GPT-4), Anthropic (Claude), and local models (Ollama)
+- **Schema Intelligence**: Enhanced NL-to-SQL performance with relationship awareness and type inference
+- **Reliability Suite**: Production-ready with rate limiting, query timeouts, and connection pooling
 
 ## Environment Variables
 
-| Variable | Description | Default |
+For a detailed guide on setting up security and local environment variables, see [Local Setup Guide](docs/LOCAL_SETUP.md).
+
+| Variable | Description | Default / Requirement |
 |----------|-------------|---------|
 | `DATABASE_URL` | PostgreSQL connection for app metadata | `postgresql://querylite:querylite_secret@localhost:5432/querylite` |
 | `OPENAI_API_KEY` | OpenAI API key for NL-to-SQL | `your-openai-api-key-here` |
-| `ENCRYPTION_KEY` | Key for encrypting connection strings | `dev-encryption-key-32chars!!` |
+| `ENCRYPTION_KEY` | Key for encrypting connection strings | **Must be 32 characters** |
+| `NEXTAUTH_SECRET` | Secret for NextAuth.js tokens | Required for Auth |
+| `NEXTAUTH_URL` | Base frontend URL for Auth callback | `http://localhost:3000` |
 | `NEXT_PUBLIC_API_URL` | Backend API URL | `http://localhost:8000` |
 
 ## Project Structure

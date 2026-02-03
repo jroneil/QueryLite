@@ -128,6 +128,18 @@ export default function LoginPage() {
                             >
                                 {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Sign In"}
                             </Button>
+
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                className="w-full text-slate-500 hover:text-white hover:bg-slate-800/50"
+                                onClick={() => {
+                                    setEmail("admin@example.com");
+                                    setPassword("password");
+                                }}
+                            >
+                                Use Demo Account
+                            </Button>
                         </form>
                     </CardContent>
                     <CardFooter className="justify-center border-t border-slate-800 pt-6">

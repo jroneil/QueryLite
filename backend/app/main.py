@@ -13,6 +13,32 @@ from app.db import models as db_models
 # Create database tables
 db_models.Base.metadata.create_all(bind=engine)
 
+from app.db.database import SessionLocal
+from app.services.auth_service import get_password_hash
+from app.db.models import User
+
+def seed_dummy_user():
+    db = SessionLocal()
+    try:
+        admin_email = "admin@example.com"
+        exists = db.query(User).filter(User.email == admin_email).first()
+        if not exists:
+            print(f"Creating dummy user: {admin_email}")
+            user = User(
+                email=admin_email,
+                name="Admin User",
+                hashed_password=get_password_hash("password")
+            )
+            db.add(user)
+        else:
+            print(f"Ensuring dummy user password is correct: {admin_email}")
+            exists.hashed_password = get_password_hash("password")
+        db.commit()
+    finally:
+        db.close()
+
+seed_dummy_user()
+
 app = FastAPI(
     title="QueryLite API",
     description="Natural Language to SQL translation service",
@@ -27,6 +53,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+from app.middleware.error_handler import error_handler_middleware
+from app.middleware.rate_limiter import rate_limit_middleware
+
+app.middleware("http")(error_handler_middleware)
+app.middleware("http")(rate_limit_middleware)
 
 from app.routers import data_sources, query, auth
 

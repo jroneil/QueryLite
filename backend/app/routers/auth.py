@@ -41,19 +41,31 @@ async def login_credentials(user_data: UserCreate, db: Session = Depends(get_db)
     """Backend login endpoint for credentials (used by NextAuth)"""
     from app.services.auth_service import verify_password
     
+    print(f"Login attempt for: {user_data.email}")
     user = db.query(User).filter(User.email == user_data.email).first()
-    if not user or not user.hashed_password:
+    
+    if not user:
+        print(f"Login failed: User {user_data.email} not found")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+        )
+        
+    if not user.hashed_password:
+        print(f"Login failed: User {user_data.email} has no password set (possibly Google user)")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
         )
     
     if not verify_password(user_data.password, user.hashed_password):
+        print(f"Login failed: Incorrect password for {user_data.email}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
         )
     
+    print(f"Login successful for: {user_data.email}")
     access_token = create_access_token(data={"sub": user.email})
     return {"access_token": access_token, "token_type": "bearer"}
 

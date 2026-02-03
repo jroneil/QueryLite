@@ -24,21 +24,21 @@
 ## Phase 2: Intelligence & Reliability
 
 ### LLM Improvements
-- [ ] Support multiple LLM providers (Anthropic, local models via Ollama)
-- [ ] Query validation before execution (syntax check)
-- [ ] Confidence scoring with "Are you sure?" prompts for low confidence
-- [ ] Query refinement: "Did you mean...?" suggestions
+- [x] Support multiple LLM providers (Anthropic, local models via Ollama)
+- [x] Query validation before execution (syntax check)
+- [x] Confidence scoring with "Are you sure?" prompts for low confidence
+- [x] Query refinement: "Did you mean...?" suggestions
 
 ### Error Handling
-- [ ] Graceful error messages for SQL failures
-- [ ] Query timeout configuration
-- [ ] Rate limiting per user/API key
-- [ ] Connection pooling for better performance
+- [x] Graceful error messages for SQL failures
+- [x] Query timeout configuration
+- [x] Rate limiting per user/API key
+- [x] Connection pooling for better performance
 
 ### Schema Intelligence
-- [ ] Auto-detect relationships between tables
-- [ ] Smart column type inference for better charts
-- [ ] Schema caching to reduce introspection overhead
+- [x] Auto-detect relationships between tables
+- [x] Smart column type inference for better charts
+- [x] Schema caching to reduce introspection overhead
 
 ---
 

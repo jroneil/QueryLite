@@ -1,4 +1,5 @@
-from fastapi import HTTPException, status
+from fastapi import status
+
 
 class QueryLiteException(Exception):
     """Base exception for QueryLite"""

@@ -2,13 +2,14 @@
 Scheduled Reports Router - Management of automated query reporting
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
 
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
 from app.db.database import get_db
-from app.db.models import ScheduledReport, SavedQuery, User
+from app.db.models import SavedQuery, ScheduledReport, User
 from app.models.schemas import ScheduledReportCreate, ScheduledReportResponse
 from app.routers.auth_deps import get_current_user
 from app.services.scheduler_service import scheduler_service

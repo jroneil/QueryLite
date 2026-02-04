@@ -1,4 +1,11 @@
 # QueryLite
+## Consulting & Integration
+
+QueryLite is intentionally open source and can be used as a reference or starting point.
+I also offer consulting to help teams adapt these patterns to their existing systems,
+including governance, auditing, and safe analytics access.
+
+This is not a hosted service.
 
 > **Turn natural language into insights.** Connect your PostgreSQL database and ask questions in plain English—QueryLite generates the SQL, runs it, and visualizes the results automatically.
 
@@ -42,6 +49,13 @@ No SQL knowledge required. Just ask, and see your data come to life.
 - **Dynamic Panels**: Real-time data execution for every dashboard panel.
 - **Auto-Viz Integration**: Deep integration with the visualization engine for instant insights.
 - **Chart Pinning**: One-click workflow from "Saved Queries" to "Dashboards".
+
+### Phase 5: Aesthetic Excellence & Executive Intelligence (Completed ✅)
+- **Executive Intel**: AI-generated dashboard narratives that synthesize across multiple panels.
+- **Premium Glassmorphism UI**: High-end visual overhaul using `backdrop-blur`, refined typography, and modern aesthetics.
+- **Command Center Architecture**: Redesigned "Ask", "Dashboards", and "Data Sources" pages into a cohesive "Foundry" design system.
+- **Robust Sizing**: Refined the visualization engine for pixel-perfect chart scaling and responsiveness.
+- **System Telemetry**: Real-time status indicators and engine monitoring footers for an operational feel.
 
 ---
 
@@ -90,6 +104,77 @@ QueryLite includes a dedicated **Pagila** instance to test intelligence right ou
     - *"Top 10 customers by total spend"* (Tests complex aggregations)
 
 See the full [Pagila Test Plan](docs/TEST_PLAN_PAGILA.md) for more scenarios.
+
+## 🔒 Security Audit & Scanning
+
+QueryLite uses **Bandit** for automated security linting of the Python backend.
+
+### Running a Security Scan
+
+To run a security audit of the backend code:
+
+```bash
+cd backend
+python -m bandit -r app
+```
+
+We have configured a `.bandit` file to manage false positives (like `assert` statements in tests or standard OAuth types). 
+
+### Dependency Auditing (Vulnerabilities)
+
+We use `pip-audit` to check for known vulnerabilities in our dependencies:
+
+```bash
+cd backend
+python -m pip_audit
+```
+
+If vulnerabilities are found, update the versions in `requirements.txt` and run `pip install` again.
+
+### Advanced Security Scanning (Safety)
+
+For more comprehensive vulnerability analysis and automated fixing:
+
+```bash
+cd backend
+python -m safety scan
+```
+
+Or to specifically check a requirements file:
+
+```bash
+python -m safety check -r requirements.txt
+```
+
+To automatically apply recommended security patches:
+
+```bash
+python -m safety scan --apply-fixes
+```
+
+### Secret Scanning (Gitleaks)
+
+To ensure no sensitive information (API keys, passwords) is committed to the repository:
+
+```bash
+gitleaks detect --source .
+```
+
+### Code Quality & Linting (Ruff)
+
+We use **Ruff** for extremely fast Python linting and code formatting:
+
+```bash
+cd backend
+python -m ruff check .
+```
+
+To automatically fix safe issues (like unused imports or incorrectly ordered imports):
+
+```bash
+python -m ruff check . --fix
+```
+
 
 ## Development (Without Docker)
 

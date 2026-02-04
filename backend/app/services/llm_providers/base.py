@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import List, Optional
+from typing import Any, List, Optional
+
 from app.models.schemas import SQLGenerationResult
+
 
 class LLMProvider(ABC):
     """Abstract base class for LLM providers"""
@@ -13,6 +15,17 @@ class LLMProvider(ABC):
         table_names: List[str]
     ) -> SQLGenerationResult:
         """Generate SQL from natural language question"""
+        pass
+    
+    @abstractmethod
+    def generate_insight(
+        self,
+        data_sample: List[dict[str, Any]],
+        question: str,
+        chart_type: str,
+        explanation: Optional[str] = None
+    ) -> str:
+        """Generate a natural language narrative/insight from data results"""
         pass
     
     @abstractmethod

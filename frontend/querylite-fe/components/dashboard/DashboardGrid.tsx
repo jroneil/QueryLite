@@ -15,9 +15,10 @@ interface Panel {
 interface DashboardGridProps {
     panels: Panel[];
     onRemovePanel?: (panelId: string) => void;
+    activeFilters?: Record<string, any>;
 }
 
-export function DashboardGrid({ panels, onRemovePanel }: DashboardGridProps) {
+export function DashboardGrid({ panels, onRemovePanel, activeFilters }: DashboardGridProps) {
     if (panels.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center py-20 bg-slate-900/20 border border-dashed border-slate-800 rounded-3xl">
@@ -48,6 +49,7 @@ export function DashboardGrid({ panels, onRemovePanel }: DashboardGridProps) {
                             gridH={panel.grid_h}
                             title={panel.title_override || undefined}
                             onRemove={onRemovePanel}
+                            activeFilters={activeFilters}
                         />
                     </div>
                 );

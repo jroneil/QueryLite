@@ -1,6 +1,6 @@
-import pytest
-from app.services.llm_providers import OpenAIProvider, AnthropicProvider, OllamaProvider
-from app.models.schemas import SQLGenerationResult
+# nosec B101 - assert statements are expected in test files
+from app.services.llm_providers import OpenAIProvider
+
 
 def test_providers_instantiation():
     """Verify that all providers can be instantiated"""

@@ -4,15 +4,14 @@ Query execution service for running SQL against user databases
 
 import time
 from typing import Any, Optional
-from sqlalchemy import create_engine, text, inspect, event
-from sqlalchemy.exc import SQLAlchemyError, OperationalError
+
 import sqlparse
+from sqlalchemy import create_engine, text
+from sqlalchemy.exc import OperationalError, SQLAlchemyError
 
-from app.models.schemas import ChartRecommendation, SchemaInfo
 from app.config import get_settings
-from app.exceptions import SQLSyntaxError, QueryTimeoutError, ConnectionError
-
-
+from app.exceptions import ConnectionError, QueryTimeoutError, SQLSyntaxError
+from app.models.schemas import ChartRecommendation
 from app.services.schema_analyzer import SchemaAnalyzer
 from app.services.schema_cache import schema_cache
 
@@ -149,14 +148,19 @@ class QueryExecutor:
         if len(columns) < 2:
             return ChartRecommendation(chart_type="table")
         
+        import logging
+        from datetime import date, datetime
+        from decimal import Decimal
+
         # Analyze column types from first few rows
         sample = results[:min(10, len(results))]
         
-        # Detect numeric columns
         numeric_cols = []
         text_cols = []
         date_cols = []
-        
+
+        logging.info(f"Analyzing {len(results)} rows for chart recommendation across columns: {columns}")
+
         for col in columns:
             values = [row.get(col) for row in sample if row.get(col) is not None]
             if not values:
@@ -164,11 +168,13 @@ class QueryExecutor:
             
             first_val = values[0]
             
-            if isinstance(first_val, (int, float)):
+            if isinstance(first_val, (int, float, Decimal)):
                 numeric_cols.append(col)
+            elif isinstance(first_val, (date, datetime)):
+                date_cols.append(col)
             elif isinstance(first_val, str):
-                # Check for date patterns
-                if any(keyword in col.lower() for keyword in ['date', 'time', 'month', 'year', 'day']):
+                # Check for date patterns in string values or column names
+                if any(keyword in col.lower() for keyword in ['date', 'time', 'month', 'year', 'day', 'ts']):
                     date_cols.append(col)
                 else:
                     text_cols.append(col)
@@ -192,7 +198,7 @@ class QueryExecutor:
                 
                 # Check if x-axis looks like time
                 x_col = text_cols[0]
-                if any(keyword in x_col.lower() for keyword in ['date', 'time', 'month', 'year', 'day', 'week']):
+                if any(keyword in x_col.lower() for keyword in ['date', 'time', 'month', 'year', 'day', 'week', 'ts', 'at']):
                     return ChartRecommendation(
                         chart_type="area",
                         x_column=x_col,

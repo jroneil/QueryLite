@@ -1,7 +1,8 @@
+import logging
+
+from app.exceptions import QueryLiteException
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
-from app.exceptions import QueryLiteException
-import logging
 
 logger = logging.getLogger(__name__)
 

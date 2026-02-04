@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import List, Any, Optional
+from typing import Any, List, Optional
+
 
 class BaseNotificationProvider(ABC):
     """Abstract base class for notification providers (Email, Webhooks, etc.)"""

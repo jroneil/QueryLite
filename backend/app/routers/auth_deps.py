@@ -5,6 +5,7 @@ Auth Dependencies - Protect routes with JWT verification
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
+
 from app.db.database import get_db
 from app.db.models import User
 from app.services.auth_service import decode_access_token

@@ -2,15 +2,23 @@
 SQLAlchemy database models
 """
 
-from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Boolean, Integer, JSON
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.sql import func
 import uuid
 
-from app.db.database import Base
-
-
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
+
+from app.db.database import Base
 
 
 class User(Base):
@@ -189,6 +197,22 @@ class Dashboard(Base):
     owner = relationship("User", back_populates="dashboards")
     workspace = relationship("Workspace")
     panels = relationship("DashboardPanel", back_populates="dashboard", cascade="all, delete-orphan")
+    filters = relationship("DashboardFilter", back_populates="dashboard", cascade="all, delete-orphan")
+
+
+class DashboardFilter(Base):
+    """Model for global dashboard filters (e.g. date range, category)"""
+    __tablename__ = "dashboard_filters"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    dashboard_id = Column(UUID(as_uuid=True), ForeignKey("dashboards.id"), nullable=False)
+    filter_type = Column(String(50), nullable=False) # date_range, category
+    column_name = Column(String(255), nullable=False) # The column name to filter on
+    label = Column(String(255), nullable=False) # User-facing label
+    default_value = Column(String(255), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    dashboard = relationship("Dashboard", back_populates="filters")
 
 
 class DashboardPanel(Base):

@@ -1,12 +1,15 @@
+import csv
+import io
 import smtplib
+from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from email.mime.application import MIMEApplication
-import io
-import csv
-from typing import List, Any, Optional
+from typing import Any, List, Optional
+
 from app.config import get_settings
+
 from .base import BaseNotificationProvider
+
 
 class SMTPEmailProvider(BaseNotificationProvider):
     """SMTP Implementation of the notification provider"""

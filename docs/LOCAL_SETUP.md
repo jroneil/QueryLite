@@ -54,6 +54,36 @@ If you see a grey screen with "Server Error" on the login page, it usually means
 ### Connection String Security
 When adding a new data source in QueryLite, the connection string is encrypted before being stored. If you change your `ENCRYPTION_KEY`, you will lose access to previously saved data sources as they won't be decryptable.
 
+### Security Scanning (Bandit)
+We use `bandit` to ensure the backend follows security best practices. To run a scan:
+1. Navigate to the backend directory: `cd backend`
+2. Run the scan: `python -m bandit -r app`
+
+If you encounter false positives, you can add `# nosec` to the specific line or update the `.bandit` configuration file.
+
+### Dependency Auditing (pip-audit)
+To check for known vulnerabilities in your installed packages:
+1. Navigate to the backend directory: `cd backend`
+2. Run the audit: `python -m pip_audit`
+
+If vulnerabilities are reported, check the "Fix Versions" column and update `backend/requirements.txt` accordingly.
+
+### Advanced Security (Safety)
+For deep vulnerability analysis and automated fixing:
+1. Navigate to the backend directory: `cd backend`
+2. Run the scan: `python -m safety scan`
+3. Check specific requirements: `python -m safety check -r requirements.txt`
+4. Automatically apply fixes: `python -m safety scan --apply-fixes`
+
+### Secret Scanning (Gitleaks)
+To prevent accidental leaks of credentials or API keys:
+1. Run the detection: `gitleaks detect --source .`
+
+### Code Quality (Ruff)
+Ruff is used to maintain high code quality and consistent import ordering.
+1. Run the check: `python -m ruff check .`
+2. Auto-fix errors: `python -m ruff check . --fix`
+
 ---
 
 ## 3. Running the App

@@ -1,9 +1,13 @@
 import json
-from typing import List
+from typing import Any, List, Optional
+
 import anthropic
+
 from app.config import get_settings
 from app.models.schemas import SQLGenerationResult
+
 from .base import LLMProvider
+
 
 class AnthropicProvider(LLMProvider):
     """Anthropic implementation of LLM provider"""
@@ -88,3 +92,37 @@ Generate the SQL query:"""
 
     def get_provider_name(self) -> str:
         return "anthropic"
+
+    def generate_insight(
+        self,
+        data_sample: List[dict[str, Any]],
+        question: str,
+        chart_type: str,
+        explanation: Optional[str] = None
+    ) -> str:
+        """Generate a natural language narrative/insight from data results"""
+        system_prompt = """You are a senior data analyst. Your task is to provide a concise (2-3 sentences max) 
+executive summary of the provided data results. Focus on the key takeaway that answers the user's original question.
+Use clear, professional language. Do not mention the raw data structure, just the insights."""
+
+        user_prompt = f"""User Question: {question}
+Query Explanation: {explanation or "N/A"}
+Chart Type: {chart_type}
+Data Sample (up to 10 rows):
+{json.dumps(data_sample[:10], indent=2)}
+
+Provide a concise insight:"""
+
+        try:
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=300,
+                temperature=0.7,
+                system=system_prompt,
+                messages=[
+                    {"role": "user", "content": user_prompt}
+                ]
+            )
+            return response.content[0].text.strip()
+        except Exception as e:
+            return f"Failed to generate insight: {str(e)}"

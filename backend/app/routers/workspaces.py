@@ -2,14 +2,20 @@
 Workspaces Router - Management of teams and collaboration spaces
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
 
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
 from app.db.database import get_db
-from app.db.models import Workspace, WorkspaceMember, User
-from app.models.schemas import WorkspaceCreate, WorkspaceResponse, WorkspaceMemberResponse
+from app.db.models import User, Workspace, WorkspaceMember
+from app.models.schemas import (
+    WebhookUpdate,
+    WorkspaceCreate,
+    WorkspaceMemberResponse,
+    WorkspaceResponse,
+)
 from app.routers.auth_deps import get_current_user
 from app.services.rbac import RBACService
 
@@ -136,7 +142,6 @@ async def remove_member(
     
     return {"message": "Member removed successfully"}
 
-from app.models.schemas import WebhookUpdate
 
 @router.patch("/{workspace_id}/webhook", response_model=WorkspaceResponse)
 async def update_webhook(

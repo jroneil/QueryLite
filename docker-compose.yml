@@ -54,16 +54,20 @@ services:
     container_name: querylite-backend
     env_file:
       - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-querylite}:${POSTGRES_PASSWORD:-querylite_secret}@postgres:5432/${POSTGRES_DB:-querylite}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
       LLM_PROVIDER: ${LLM_PROVIDER:-openai}
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
     ports:
       - "8000:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
     volumes:
       - ./backend:/app
     networks:
@@ -100,6 +104,19 @@ services:
       - "8025:8025" # Web UI port
     networks:
       - querylite-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: querylite-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - querylite-network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:

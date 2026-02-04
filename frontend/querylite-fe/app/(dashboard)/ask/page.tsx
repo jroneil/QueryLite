@@ -219,224 +219,275 @@ function AskPageContent() {
     ];
 
     return (
-        <div className="p-8">
-            {/* Header */}
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold text-white mb-2">Ask a Question</h1>
-                <p className="text-slate-400">
-                    Query your database using natural language
-                </p>
+        <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-10">
+            {/* Hero / Header Section */}
+            <div className="relative overflow-hidden rounded-3xl bg-slate-900/40 border border-white/5 p-8 md:p-12 mb-4 group">
+                <div className="absolute top-0 right-0 -translate-y-12 translate-x-12 h-64 w-64 bg-violet-600/20 blur-[100px] rounded-full" />
+                <div className="absolute bottom-0 left-0 translate-y-24 -translate-x-12 h-64 w-64 bg-indigo-600/20 blur-[100px] rounded-full" />
+
+                <div className="relative z-10 space-y-4 max-w-2xl">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400 text-xs font-semibold tracking-wide uppercase">
+                        <Sparkles className="h-3 w-3" />
+                        AI-Powered Analysis
+                    </div>
+                    <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight leading-none">
+                        Talk to your <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-indigo-400">Data</span>
+                    </h1>
+                    <p className="text-lg text-slate-400 max-w-lg leading-relaxed">
+                        Instant SQL generation and visual insights using natural language. No more complex querying, just ask.
+                    </p>
+                </div>
             </div>
 
-            {/* LLM Status Warning */}
-            {llmConfigured === false && (
-                <Card className="bg-amber-500/10 border-amber-500/30 mb-6">
-                    <CardContent className="flex items-center gap-3 p-4">
-                        <AlertCircle className="h-5 w-5 text-amber-500" />
-                        <div>
-                            <p className="text-amber-400 font-medium">LLM Not Configured</p>
-                            <p className="text-amber-400/70 text-sm">
-                                Set OPENAI_API_KEY in your .env file to enable natural language
-                                queries.
-                            </p>
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
-
-            {/* Query Form */}
-            <Card className="bg-slate-900/50 border-slate-800 mb-8">
-                <CardHeader>
-                    <CardTitle className="text-white flex items-center gap-2">
-                        <Sparkles className="h-5 w-5 text-violet-400" />
-                        Natural Language Query
-                    </CardTitle>
-                    <CardDescription className="text-slate-400">
-                        Describe what you want to know and we'll generate the SQL for you
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        {/* Data Source Selector */}
-                        <div className="space-y-2">
-                            <Label htmlFor="dataSource" className="text-slate-300">
-                                Data Source
-                            </Label>
-                            {dataSources.length === 0 ? (
-                                <p className="text-slate-500 text-sm">
-                                    No data sources connected. Add one first.
-                                </p>
-                            ) : (
-                                <select
-                                    id="dataSource"
-                                    value={selectedSource}
-                                    onChange={(e) => setSelectedSource(e.target.value)}
-                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
-                                >
-                                    {dataSources.map((ds) => (
-                                        <option key={ds.id} value={ds.id}>
-                                            {ds.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            )}
-                        </div>
-
-                        {/* Question Input */}
-                        <div className="space-y-2">
-                            <Label htmlFor="question" className="text-slate-300">
-                                Your Question
-                            </Label>
-                            <Textarea
-                                id="question"
-                                value={question}
-                                onChange={(e) => setQuestion(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                placeholder="e.g., Show me the monthly revenue trends for the past year"
-                                rows={3}
-                                className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
-                            />
-                        </div>
-
-                        {/* Example Questions */}
-                        <div className="flex flex-wrap gap-2">
-                            {exampleQuestions.map((q) => (
-                                <button
-                                    key={q}
-                                    type="button"
-                                    onClick={() => setQuestion(q)}
-                                    className="text-xs px-3 py-1.5 rounded-full bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-300 transition-colors"
-                                >
-                                    {q}
-                                </button>
-                            ))}
-                        </div>
-
-                        {/* Submit Button */}
-                        <Button
-                            type="submit"
-                            disabled={loading || !selectedSource || !question.trim()}
-                            className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20"
-                        >
-                            {loading ? (
-                                <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Generating...
-                                </>
-                            ) : (
-                                <>
-                                    <MessageSquareText className="mr-2 h-4 w-4" />
-                                    Ask Question
-                                </>
-                            )}
-                        </Button>
-                    </form>
-                </CardContent>
-            </Card>
-
-            {/* Error Display */}
-            {error && (
-                <Card className="bg-red-500/10 border-red-500/30 mb-8">
-                    <CardContent className="flex items-center gap-3 p-4">
-                        <AlertCircle className="h-5 w-5 text-red-500" />
-                        <p className="text-red-400">{error}</p>
-                    </CardContent>
-                </Card>
-            )}
-
-            {/* Results */}
-            {result && (
-                <div className="space-y-6">
-                    {/* SQL Query */}
-                    <Card className="bg-slate-900/50 border-slate-800">
-                        <CardHeader className="pb-3">
-                            <div className="flex items-center justify-between">
-                                <CardTitle className="text-white text-lg flex items-center gap-2">
-                                    <Code className="h-5 w-5 text-violet-400" />
-                                    Generated SQL
-                                </CardTitle>
-                                <div className="flex items-center gap-2">
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => {
-                                            navigator.clipboard.writeText(result.sql_query);
-                                        }}
-                                        className="text-slate-400 hover:text-white hover:bg-slate-800 h-8"
-                                    >
-                                        <Copy className="h-4 w-4 mr-2" />
-                                        Copy
-                                    </Button>
-                                    <Badge className="bg-violet-500/20 text-violet-400">
-                                        {result.execution_time_ms.toFixed(1)}ms
-                                    </Badge>
+            {/* Main Interface */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                {/* Left Side: Query Form */}
+                <div className="lg:col-span-12 space-y-8">
+                    <Card className="bg-slate-900/40 backdrop-blur-xl border-slate-800/50 shadow-2xl rounded-3xl overflow-hidden">
+                        <CardHeader className="border-b border-slate-800/50 bg-slate-900/20 p-6">
+                            <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-xl bg-violet-600/10 border border-violet-500/20 flex items-center justify-center">
+                                    <MessageSquareText className="h-5 w-5 text-violet-400" />
                                 </div>
-                            </div>
-                            <CardDescription className="text-slate-400">
-                                {result.explanation}
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <pre className="bg-slate-950 rounded-lg p-4 overflow-x-auto text-sm text-slate-300 font-mono border border-slate-800">
-                                {result.sql_query}
-                            </pre>
-                        </CardContent>
-                    </Card>
-
-                    {/* Chart Visualization */}
-                    <Card className="bg-slate-900/50 border-slate-800">
-                        <CardHeader>
-                            <div className="flex items-center justify-between">
-                                <CardTitle className="text-white text-lg flex items-center gap-2">
-                                    <BarChart3 className="h-5 w-5 text-emerald-400" />
-                                    Analysis Results
-                                </CardTitle>
-                                <div className="flex items-center gap-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={handleSaveQuery}
-                                        disabled={saving || saveSuccess}
-                                        className={`border-slate-700 h-8 ${saveSuccess ? 'text-emerald-400 border-emerald-500/50' : 'text-slate-300'}`}
-                                    >
-                                        {saving ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : saveSuccess ? <Check className="h-3 w-3 mr-2" /> : <Save className="h-3 w-3 mr-2" />}
-                                        {saveSuccess ? "Saved" : "Save Query"}
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => {
-                                            const csv = [
-                                                Object.keys(result.results[0]).join(","),
-                                                ...result.results.map((row: any) => Object.values(row).join(","))
-                                            ].join("\n");
-                                            const blob = new Blob([csv], { type: "text/csv" });
-                                            const url = window.URL.createObjectURL(blob);
-                                            const a = document.createElement("a");
-                                            a.href = url;
-                                            a.download = `query-results-${new Date().getTime()}.csv`;
-                                            a.click();
-                                        }}
-                                        className="border-slate-700 text-slate-300 h-8 hover:bg-slate-800"
-                                    >
-                                        <Download className="h-3 w-3 mr-2" />
-                                        Export CSV
-                                    </Button>
-                                    <Badge className="bg-emerald-500/20 text-emerald-400">
-                                        {result.row_count} rows
-                                    </Badge>
+                                <div>
+                                    <CardTitle className="text-white text-xl">Intelligence Engine</CardTitle>
+                                    <CardDescription className="text-slate-400 text-sm italic">
+                                        Describe your analytical goal in plain English
+                                    </CardDescription>
                                 </div>
                             </div>
                         </CardHeader>
-                        <CardContent>
-                            <AutoChart
-                                data={result.results}
-                                recommendation={result.chart_recommendation}
-                            />
+                        <CardContent className="p-8 space-y-8">
+                            {/* LLM Status Alert */}
+                            {llmConfigured === false && (
+                                <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/20 flex items-center gap-4 animate-in fade-in slide-in-from-top-2">
+                                    <div className="h-10 w-10 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0 text-amber-500">
+                                        <AlertCircle className="h-5 w-5" />
+                                    </div>
+                                    <div>
+                                        <p className="text-amber-400 font-bold text-sm">LLM Core Unavailable</p>
+                                        <p className="text-amber-400/70 text-xs">Configure OPENAI_API_KEY in environment to activate.</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            <form onSubmit={handleSubmit} className="space-y-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    {/* Data Source */}
+                                    <div className="space-y-3">
+                                        <Label htmlFor="dataSource" className="text-slate-400 text-xs font-bold uppercase tracking-widest pl-1">
+                                            Dataset Context
+                                        </Label>
+                                        {dataSources.length === 0 ? (
+                                            <div className="h-12 flex items-center px-4 rounded-2xl bg-slate-950/50 border border-slate-800 text-slate-500 italic text-sm">
+                                                No active sources...
+                                            </div>
+                                        ) : (
+                                            <select
+                                                id="dataSource"
+                                                value={selectedSource}
+                                                onChange={(e) => setSelectedSource(e.target.value)}
+                                                className="w-full h-12 bg-slate-950/50 border border-slate-800 rounded-2xl px-4 text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50 hover:border-slate-700 transition-all appearance-none cursor-pointer"
+                                            >
+                                                {dataSources.map((ds) => (
+                                                    <option key={ds.id} value={ds.id} className="bg-slate-900">
+                                                        {ds.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        )}
+                                    </div>
+
+                                    {/* Quick Context Chips */}
+                                    <div className="space-y-3">
+                                        <Label className="text-slate-400 text-xs font-bold uppercase tracking-widest pl-1 italic">
+                                            Suggested Missions
+                                        </Label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {exampleQuestions.map((q) => (
+                                                <button
+                                                    key={q}
+                                                    type="button"
+                                                    onClick={() => setQuestion(q)}
+                                                    className="px-4 py-2 rounded-2xl bg-slate-950/50 border border-slate-800 text-slate-400 text-xs font-medium hover:border-violet-500/50 hover:text-white hover:bg-violet-600/5 transition-all duration-300"
+                                                >
+                                                    {q}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Question Area */}
+                                <div className="space-y-3 relative">
+                                    <Label htmlFor="question" className="text-slate-400 text-xs font-bold uppercase tracking-widest pl-1">
+                                        Analytical Inquiry
+                                    </Label>
+                                    <div className="relative group">
+                                        <Textarea
+                                            id="question"
+                                            value={question}
+                                            onChange={(e) => setQuestion(e.target.value)}
+                                            onKeyDown={handleKeyDown}
+                                            placeholder="What would you like to discover today?"
+                                            rows={4}
+                                            className="w-full bg-slate-950/50 border-slate-800 rounded-3xl text-lg text-white placeholder:text-slate-600 focus:ring-4 focus:ring-violet-500/10 focus:border-violet-500/50 p-6 shadow-inner transition-all resize-none"
+                                        />
+                                        <div className="absolute bottom-4 right-4 text-[10px] text-slate-700 font-mono tracking-tighter opacity-0 group-hover:opacity-100 transition-opacity">
+                                            CMD + ENTER TO EXECUTE
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Action Bar */}
+                                <div className="pt-2">
+                                    <Button
+                                        type="submit"
+                                        disabled={loading || !selectedSource || !question.trim()}
+                                        className="w-full md:w-auto px-10 h-14 bg-violet-600 hover:bg-violet-500 text-white rounded-2xl shadow-[0_0_20px_rgba(124,58,237,0.3)] hover:shadow-[0_0_30px_rgba(124,58,237,0.5)] transition-all duration-500 group relative overflow-hidden"
+                                    >
+                                        <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+                                        <div className="relative flex items-center justify-center gap-3 font-bold uppercase tracking-widest">
+                                            {loading ? (
+                                                <>
+                                                    <Loader2 className="h-5 w-5 animate-spin" />
+                                                    Synthesizing Result...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Sparkles className="h-5 w-5 group-hover:rotate-12 transition-transform" />
+                                                    Execute Analysis
+                                                </>
+                                            )}
+                                        </div>
+                                    </Button>
+                                </div>
+                            </form>
                         </CardContent>
                     </Card>
+
+                    {/* Error Feedback */}
+                    {error && (
+                        <div className="p-6 rounded-3xl bg-rose-500/5 border border-rose-500/20 flex items-center gap-4 animate-in zoom-in-95">
+                            <div className="h-12 w-12 rounded-2xl bg-rose-500/10 flex items-center justify-center flex-shrink-0">
+                                <AlertCircle className="h-6 w-6 text-rose-500" />
+                            </div>
+                            <div>
+                                <h4 className="text-rose-500 font-black text-sm tracking-tight uppercase">Execution Failed</h4>
+                                <p className="text-rose-400/80 text-sm leading-relaxed">{error}</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Result Presentation */}
+                    {result && (
+                        <div className="space-y-8 animate-in slide-in-from-bottom-5 duration-700">
+                            {/* Insight Visualization */}
+                            <Card className="bg-slate-900/40 backdrop-blur-xl border-slate-800/50 shadow-2xl rounded-3xl overflow-hidden group">
+                                <CardHeader className="border-b border-slate-800/50 bg-slate-900/20 p-6 flex flex-row items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-10 w-10 rounded-xl bg-emerald-600/10 border border-emerald-500/20 flex items-center justify-center">
+                                            <BarChart3 className="h-5 w-5 text-emerald-400" />
+                                        </div>
+                                        <div>
+                                            <CardTitle className="text-white text-lg">Visual Insights</CardTitle>
+                                            <CardDescription className="text-slate-500 text-xs">
+                                                Generated based on {result.row_count} data points
+                                            </CardDescription>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={handleSaveQuery}
+                                            disabled={saving || saveSuccess}
+                                            className={`rounded-xl px-4 border-slate-700 h-9 transition-all duration-300 ${saveSuccess ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-slate-950/20 hover:bg-slate-800 text-slate-300'}`}
+                                        >
+                                            {saving ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : saveSuccess ? <Check className="h-3.5 w-3.5 mr-2" /> : <Save className="h-3.5 w-3.5 mr-2" />}
+                                            <span className="font-bold text-[10px] uppercase tracking-wider">{saveSuccess ? "Stored in Vault" : "Favorite Query"}</span>
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                                const csv = [
+                                                    Object.keys(result.results[0]).join(","),
+                                                    ...result.results.map((row: any) => Object.values(row).join(","))
+                                                ].join("\n");
+                                                const blob = new Blob([csv], { type: "text/csv" });
+                                                const url = window.URL.createObjectURL(blob);
+                                                const a = document.createElement("a");
+                                                a.href = url;
+                                                a.download = `query-results-${new Date().getTime()}.csv`;
+                                                a.click();
+                                            }}
+                                            className="rounded-xl px-4 border-slate-700 bg-slate-950/20 hover:bg-slate-800 text-slate-300 h-9 transition-all"
+                                        >
+                                            <Download className="h-3.5 w-3.5 mr-2" />
+                                            <span className="font-bold text-[10px] uppercase tracking-wider">Download Raw</span>
+                                        </Button>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="p-8">
+                                    <div className="h-[450px] w-full mt-4 bg-slate-950/30 rounded-2xl border border-slate-800/30 p-4 shadow-inner">
+                                        <AutoChart
+                                            data={result.results}
+                                            recommendation={result.chart_recommendation}
+                                        />
+                                    </div>
+                                    <div className="mt-8 p-6 rounded-2xl bg-slate-950/50 border border-slate-800/50 space-y-4">
+                                        <div className="flex items-center gap-2 text-violet-400 text-xs font-bold uppercase tracking-tighter">
+                                            <Sparkles className="h-3 w-3" />
+                                            AI Interpretation
+                                        </div>
+                                        <p className="text-slate-300 leading-relaxed text-sm italic pr-12">
+                                            {result.explanation}
+                                        </p>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Technical Review: SQL */}
+                            <Card className="bg-slate-900/40 backdrop-blur-xl border-slate-800/50 shadow-2xl rounded-3xl overflow-hidden group">
+                                <CardHeader className="border-b border-slate-800/50 bg-slate-900/20 p-6 flex flex-row items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-10 w-10 rounded-xl bg-slate-600/10 border border-slate-500/20 flex items-center justify-center">
+                                            <Code className="h-5 w-5 text-slate-400" />
+                                        </div>
+                                        <CardTitle className="text-white text-lg">Query Protocol</CardTitle>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="text-[10px] text-slate-500 font-mono tracking-widest uppercase">
+                                            EXEC_TIME: {result.execution_time_ms.toFixed(1)}MS
+                                        </div>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(result.sql_query);
+                                                toast.success("SQL copied to clipboard");
+                                            }}
+                                            className="h-8 px-3 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+                                        >
+                                            <Copy className="h-3.5 w-3.5 mr-2" />
+                                            <span className="text-[10px] font-bold uppercase">Copy Protocol</span>
+                                        </Button>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="p-8">
+                                    <div className="relative group">
+                                        <div className="absolute -inset-1 bg-gradient-to-r from-violet-500/20 to-indigo-500/20 rounded-2xl blur opacity-25 group-hover:opacity-100 transition duration-1000 group-hover:duration-200" />
+                                        <pre className="relative bg-black rounded-xl p-6 overflow-x-auto text-[13px] text-indigo-100/90 font-mono leading-relaxed border border-slate-800 shadow-2xl">
+                                            {result.sql_query}
+                                        </pre>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    )}
                 </div>
-            )}
+            </div>
         </div>
     );
 }

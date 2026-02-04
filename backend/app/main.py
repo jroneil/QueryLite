@@ -60,12 +60,13 @@ from app.middleware.rate_limiter import rate_limit_middleware
 app.middleware("http")(error_handler_middleware)
 app.middleware("http")(rate_limit_middleware)
 
-from app.routers import data_sources, query, auth
+from app.routers import data_sources, query, auth, workspaces
 
 # Include routers
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(data_sources.router, prefix="/api/data-sources", tags=["Data Sources"])
 app.include_router(query.router, prefix="/api", tags=["Query"])
+app.include_router(workspaces.router, prefix="/api", tags=["Workspaces"])
 
 
 @app.get("/health")

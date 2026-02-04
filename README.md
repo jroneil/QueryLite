@@ -28,7 +28,13 @@ No SQL knowledge required. Just ask, and see your data come to life.
 - **Confidence Engine**: Real-time confidence scoring with automatic refinement suggestions for low-confidence queries.
 - **Custom Error Handling**: Graceful, user-friendly messaging for complex SQL errors and database timeouts.
 
-See the [Phase 2 Implementation Plan](docs/phase_2_plan.md) for technical details.
+### Phase 3: Enterprise Features (Phase 3A Completed)
+- **Audit Logging**: Comprehensive security audit trail for all queries and configuration changes.
+- **Read-Only Enforcement**: Strict safety middleware to prevent non-SELECT statements.
+- **Team Workspaces**: Secure collaboration environments for sharing data sources and insights.
+- **RBAC (Role-Based Access Control)**: Granular permissions (Admin, Editor, Viewer) for workspace members.
+
+See the [Phase 3 Plan](docs/phase_3_plan.md) for the roadmap of Phase 3B.
 
 ---
 

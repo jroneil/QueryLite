@@ -45,12 +45,14 @@ class DataSourceCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
     connection_string: str = Field(..., min_length=1)
+    workspace_id: Optional[UUID] = None
 
 
 class DataSourceResponse(BaseModel):
     """Schema for data source response"""
     id: UUID
     user_id: UUID
+    workspace_id: Optional[UUID] = None
     name: str
     description: Optional[str]
     created_at: datetime
@@ -145,3 +147,33 @@ class QueryResponse(BaseModel):
 class SchemaInfo(BaseModel):
     """Schema for database schema information"""
     tables: List[dict[str, Any]]
+
+
+class WorkspaceCreate(BaseModel):
+    """Schema for creating a new workspace"""
+    name: str = Field(..., min_length=1, max_length=255)
+    description: Optional[str] = None
+
+
+class WorkspaceMemberResponse(BaseModel):
+    """Schema for workspace member info"""
+    user_id: UUID
+    email: str
+    name: Optional[str] = None
+    role: str # admin, editor, viewer
+
+    class Config:
+        from_attributes = True
+
+
+class WorkspaceResponse(BaseModel):
+    """Schema for workspace info"""
+    id: UUID
+    name: str
+    description: Optional[str] = None
+    owner_id: UUID
+    created_at: datetime
+    members: List[WorkspaceMemberResponse] = []
+
+    class Config:
+        from_attributes = True

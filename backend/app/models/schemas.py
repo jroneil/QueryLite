@@ -2,8 +2,9 @@
 Pydantic schemas for API request/response models
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Any
+import json
 from datetime import datetime
 from uuid import UUID
 
@@ -124,7 +125,7 @@ class SQLGenerationResult(BaseModel):
 
 class ChartRecommendation(BaseModel):
     """Schema for chart type recommendation"""
-    chart_type: str = Field(..., pattern="^(bar|line|donut|table)$")
+    chart_type: str = Field(..., pattern="^(bar|line|donut|area|table)$")
     x_column: Optional[str] = None
     y_column: Optional[str] = None
     category_column: Optional[str] = None
@@ -150,9 +151,14 @@ class SchemaInfo(BaseModel):
 
 
 class WorkspaceCreate(BaseModel):
-    """Schema for creating a new workspace"""
-    name: str = Field(..., min_length=1, max_length=255)
+    name: str = Field(..., min_length=1, max_length=100)
     description: Optional[str] = None
+    webhook_url: Optional[str] = None
+    webhook_enabled: bool = False
+
+class WebhookUpdate(BaseModel):
+    webhook_url: Optional[str]
+    webhook_enabled: bool
 
 
 class WorkspaceMemberResponse(BaseModel):
@@ -167,13 +173,81 @@ class WorkspaceMemberResponse(BaseModel):
 
 
 class WorkspaceResponse(BaseModel):
-    """Schema for workspace info"""
     id: UUID
     name: str
-    description: Optional[str] = None
+    description: Optional[str]
     owner_id: UUID
+    webhook_url: Optional[str] = None
+    webhook_enabled: bool = False
     created_at: datetime
     members: List[WorkspaceMemberResponse] = []
+
+    class Config:
+        from_attributes = True
+
+
+# Comment Schemas
+class CommentCreate(BaseModel):
+    """Schema for creating a new comment"""
+    content: str = Field(..., min_length=1)
+
+
+class CommentResponse(BaseModel):
+    """Schema for comment response"""
+    id: UUID
+    user_id: UUID
+    saved_query_id: UUID
+    content: str
+    created_at: datetime
+    user_name: Optional[str] = None # Added via property or join
+
+    class Config:
+        from_attributes = True
+
+
+# Scheduled Report Schemas
+class ScheduledReportCreate(BaseModel):
+    """Schema for creating a new scheduled report"""
+    name: str = Field(..., min_length=1, max_length=255)
+    saved_query_id: UUID
+    schedule_cron: str = Field(..., min_length=5)
+    recipient_emails: List[str] # Expecting a list from the frontend
+    is_active: bool = True
+
+    @field_validator("recipient_emails", mode="before")
+    @classmethod
+    def validate_recipient_emails(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except (json.JSONDecodeError, TypeError):
+                return [email.strip() for email in v.split(",") if email.strip()]
+        return v
+
+
+class ScheduledReportResponse(BaseModel):
+    """Schema for scheduled report response"""
+    id: UUID
+    owner_id: UUID
+    saved_query_id: UUID
+    name: str
+    schedule_cron: str
+    recipient_emails: List[str]
+    is_active: bool
+    last_run_at: Optional[datetime]
+    created_at: datetime
+    updated_at: datetime
+
+    @field_validator("recipient_emails", mode="before")
+    @classmethod
+    def validate_recipient_emails(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except (json.JSONDecodeError, TypeError):
+                # Fallback for comma-separated strings if JSON parsing fails
+                return [email.strip() for email in v.split(",") if email.strip()]
+        return v
 
     class Config:
         from_attributes = True

@@ -135,3 +135,26 @@ async def remove_member(
     db.commit()
     
     return {"message": "Member removed successfully"}
+
+from app.models.schemas import WebhookUpdate
+
+@router.patch("/{workspace_id}/webhook", response_model=WorkspaceResponse)
+async def update_webhook(
+    workspace_id: UUID,
+    webhook_data: WebhookUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Update workspace webhook settings (Admin only)"""
+    RBACService.check_permission(db, current_user.id, workspace_id, required_role="admin")
+    
+    workspace = db.query(Workspace).filter(Workspace.id == workspace_id).first()
+    if not workspace:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+        
+    workspace.webhook_url = webhook_data.webhook_url
+    workspace.webhook_enabled = webhook_data.webhook_enabled
+    db.commit()
+    db.refresh(workspace)
+    
+    return workspace

@@ -45,7 +45,24 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Configure CORS
+from app.services.scheduler_service import scheduler_service
+
+@app.on_event("startup")
+async def startup_event():
+    scheduler_service.start()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    scheduler_service.shutdown()
+
+# Additional middlewares added later to ensure correct ordering
+from app.middleware.error_handler import error_handler_middleware
+from app.middleware.rate_limiter import rate_limit_middleware
+
+app.middleware("http")(error_handler_middleware)
+app.middleware("http")(rate_limit_middleware)
+
+# Configure CORS - Must be outermost to ensure headers are added to all responses (including errors)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://frontend:3000"],
@@ -54,19 +71,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from app.middleware.error_handler import error_handler_middleware
-from app.middleware.rate_limiter import rate_limit_middleware
-
-app.middleware("http")(error_handler_middleware)
-app.middleware("http")(rate_limit_middleware)
-
-from app.routers import data_sources, query, auth, workspaces
+from app.routers import data_sources, query, auth, workspaces, scheduled_reports
 
 # Include routers
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(data_sources.router, prefix="/api/data-sources", tags=["Data Sources"])
 app.include_router(query.router, prefix="/api", tags=["Query"])
 app.include_router(workspaces.router, prefix="/api", tags=["Workspaces"])
+app.include_router(scheduled_reports.router, prefix="/api", tags=["Scheduled Reports"])
 
 
 @app.get("/health")

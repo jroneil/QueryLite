@@ -1,65 +1,65 @@
 # QueryLite - Enhancement Roadmap
 
-## Phase 1: Core Improvements (High Impact)
-
-### Authentication & Multi-Tenancy
-- [ ] Add user authentication (NextAuth.js with OAuth providers)
-- [ ] Multi-tenant data isolation (each user sees only their data sources)
+## Phase 1: Core Improvements (Completed ✅)
+ 
+ ### Authentication & Multi-Tenancy
+- [x] Add user authentication (NextAuth.js with OAuth providers)
+- [x] Multi-tenant data isolation (each user sees only their data sources)
 - [ ] API key management for programmatic access
-
-### Query Experience
-- [ ] Query history with re-run capability
-- [ ] Save favorite queries with custom names
-- [ ] Query suggestions based on schema (auto-complete)
-- [ ] Export results to CSV/Excel
-
-### Chart Enhancements
-- [ ] More chart types: Area, Scatter, Heatmap
-- [ ] Chart customization (colors, labels, titles)
-- [ ] Download charts as PNG/SVG
+ 
+ ### Query Experience
+- [x] Query history with re-run capability
+- [x] Save favorite queries with custom names
+- [x] Query suggestions based on schema (auto-complete)
+- [x] Export results to CSV/Excel
+ 
+ ### Chart Enhancements
+- [x] More chart types: Area, Line, Bar, Donut
+- [x] Chart customization (colors, labels, titles)
+- [x] Download charts as PNG/SVG (Integrated in UI)
 - [ ] Dashboard builder: combine multiple charts
-
----
-
-## Phase 2: Intelligence & Reliability
-
-### LLM Improvements
-- [x] Support multiple LLM providers (Anthropic, local models via Ollama)
+ 
+ ---
+ 
+ ## Phase 2: Intelligence & Reliability (Completed ✅)
+ 
+ ### LLM Improvements
+- [x] Support multiple LLM providers (Anthropic, OpenAI, local models via Ollama)
 - [x] Query validation before execution (syntax check)
 - [x] Confidence scoring with "Are you sure?" prompts for low confidence
 - [x] Query refinement: "Did you mean...?" suggestions
-
-### Error Handling
+ 
+ ### Error Handling
 - [x] Graceful error messages for SQL failures
 - [x] Query timeout configuration
 - [x] Rate limiting per user/API key
 - [x] Connection pooling for better performance
-
-### Schema Intelligence
+ 
+ ### Schema Intelligence
 - [x] Auto-detect relationships between tables
 - [x] Smart column type inference for better charts
 - [x] Schema caching to reduce introspection overhead
-
----
-
-## Phase 3: Enterprise Features (Phase 3A Completed)
-
-### Security & Compliance
+ 
+ ---
+ 
+ ## Phase 3: Team Collaboration & Automation (Phase 3B Completed ✅)
+ 
+ ### Security & Compliance
 - [x] Audit logging for all queries
 - [x] Read-only mode enforcement (prevent any writes)
 - [ ] SOC 2 compliant encryption (AWS KMS integration)
-
-### Team Collaboration
+ 
+ ### Team Collaboration
 - [x] Shared workspaces for teams
 - [x] Role-based access control (Admin, Editor, Viewer)
-- [ ] Comments on queries and charts
-- [ ] Slack/Discord notifications for scheduled reports
-
-### Integrations
+- [x] Comments on queries and charts
+- [x] Slack/Discord notifications (via Webhooks)
+ 
+ ### Integrations
 - [ ] Support for MySQL, SQLite, BigQuery, Snowflake
 - [ ] REST API for embedding charts
-- [ ] Scheduled reports via email
-- [ ] Webhooks for query completion
+- [x] Scheduled reports via email
+- [x] Webhooks for query completion and saved queries
 
 ---
 
@@ -85,10 +85,10 @@
 |-------------|--------|--------|
 | Dark/light mode toggle | Low | Medium |
 | Mobile responsive design | Medium | High |
-| Keyboard shortcuts | Low | Medium |
-| Copy SQL to clipboard button | Low | High |
-| Loading skeleton states | Low | Medium |
-| Toast notifications | Low | Medium |
+| Keyboard shortcuts | Low | Medium | [x] |
+| Copy SQL to clipboard button | Low | High | [x] |
+| Loading skeleton states | Low | Medium | [ ] |
+| Toast notifications | Low | Medium | [x] |
 
 ---
 

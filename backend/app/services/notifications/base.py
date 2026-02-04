@@ -1,0 +1,15 @@
+from abc import ABC, abstractmethod
+from typing import List, Any, Optional
+
+class BaseNotificationProvider(ABC):
+    """Abstract base class for notification providers (Email, Webhooks, etc.)"""
+    
+    @abstractmethod
+    async def send_report(self, 
+                          recipients: List[str], 
+                          report_name: str, 
+                          query_text: str, 
+                          results: List[dict[str, Any]],
+                          chart_type: Optional[str] = None) -> bool:
+        """Send a formatted query report"""
+        pass

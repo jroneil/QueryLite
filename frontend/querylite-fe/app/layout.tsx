@@ -18,6 +18,7 @@ export const metadata: Metadata = {
 };
 
 import { AuthProvider } from "./components/auth/auth-provider";
+import { Toaster } from "sonner";
 
 export default function RootLayout({
   children,
@@ -25,12 +26,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-slate-950 text-slate-50`}
       >
         <AuthProvider>
           {children}
+          <Toaster position="top-right" theme="dark" richColors />
         </AuthProvider>
       </body>
     </html>

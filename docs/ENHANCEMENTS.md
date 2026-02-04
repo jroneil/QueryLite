@@ -17,7 +17,7 @@
 - [x] More chart types: Area, Line, Bar, Donut
 - [x] Chart customization (colors, labels, titles)
 - [x] Download charts as PNG/SVG (Integrated in UI)
-- [ ] Dashboard builder: combine multiple charts
+- [x] Dashboard builder: combine multiple charts ✅
  
  ---
  
@@ -68,10 +68,13 @@
 ### AI-Powered Insights
 - [ ] Automatic anomaly detection
 - [ ] Trend analysis and forecasting
-- [ ] Natural language summaries of results
-- [ ] "Explain this data" feature
+- [ ] Natural language summaries of results (Auto-Narrative)
+- [ ] "Explain this data" feature (Deep Dive Analysis)
+- [ ] Anomaly detection & alerting
 
-### Performance
+### Performance & Interactivity
+- [ ] Global Dashboard Filters (Date-range, Category)
+- [ ] Drill-down actions (Chart -> Raw Data)
 - [ ] Query result caching (Redis)
 - [ ] Background query execution for large datasets
 - [ ] Pagination for large result sets

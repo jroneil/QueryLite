@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Heart, Play, Trash2, Database, Code, BarChart3, Search, Calendar, Clock, MessageSquare, Send, User } from "lucide-react";
+import { useState, useEffect, Suspense } from "react";
+import { Heart, Play, Trash2, Database, Code, BarChart3, Search, Calendar, Clock, MessageSquare, Send, User, LayoutDashboard, ArrowRight, X } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { authenticatedFetch } from "@/lib/api";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
     Dialog,
     DialogContent,
@@ -47,6 +48,18 @@ interface Comment {
 }
 
 export default function SavedQueriesPage() {
+    return (
+        <Suspense fallback={<div className="p-8 text-slate-500">Loading saved queries...</div>}>
+            <SavedQueriesContent />
+        </Suspense>
+    );
+}
+
+function SavedQueriesContent() {
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const dashId = searchParams.get("dashId");
+
     const [queries, setQueries] = useState<SavedQuery[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
@@ -64,6 +77,12 @@ export default function SavedQueriesPage() {
     const [comments, setComments] = useState<Comment[]>([]);
     const [newComment, setNewComment] = useState("");
     const [isAddingComment, setIsAddingComment] = useState(false);
+
+    // Dashboard Pinning states
+    const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
+    const [dashboards, setDashboards] = useState<any[]>([]);
+    const [selectedDashboardId, setSelectedDashboardId] = useState<string>("");
+    const [isPinning, setIsPinning] = useState(false);
 
     useEffect(() => {
         fetchSavedQueries();
@@ -114,6 +133,64 @@ export default function SavedQueriesPage() {
         } finally {
             setIsAddingComment(false);
         }
+    };
+
+    const fetchDashboards = async () => {
+        try {
+            const res = await authenticatedFetch("/api/dashboards/");
+            if (res.ok) {
+                const data = await res.json();
+                setDashboards(data);
+                if (dashId) {
+                    setSelectedDashboardId(dashId);
+                } else if (data.length > 0) {
+                    setSelectedDashboardId(data[0].id);
+                }
+            }
+        } catch (error) {
+            console.error("Error fetching dashboards:", error);
+        }
+    };
+
+    useEffect(() => {
+        if (dashId) {
+            fetchDashboards();
+        }
+    }, [dashId]);
+
+    const handlePinToDashboard = async () => {
+        if (!selectedQuery || !selectedDashboardId) return;
+        setIsPinning(true);
+        try {
+            const res = await authenticatedFetch(`/api/dashboards/${selectedDashboardId}/panels`, {
+                method: "POST",
+                body: JSON.stringify({
+                    saved_query_id: selectedQuery.id,
+                    title_override: selectedQuery.name
+                }),
+            });
+            if (res.ok) {
+                toast.success("Pinned to dashboard!");
+                setIsPinDialogOpen(false);
+                if (dashId) {
+                    router.push(`/dashboards/${dashId}`);
+                }
+            } else {
+                toast.error("Failed to pin to dashboard");
+            }
+        } catch (error) {
+            toast.error("An error occurred");
+        } finally {
+            setIsPinning(false);
+        }
+    };
+
+    const openPinDialog = (query: SavedQuery, e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setSelectedQuery(query);
+        fetchDashboards();
+        setIsPinDialogOpen(true);
     };
 
     const deleteComment = async (commentId: string) => {
@@ -218,6 +295,30 @@ export default function SavedQueriesPage() {
                 </div>
             </div>
 
+            {dashId && (
+                <div className="mb-8 p-4 bg-violet-600/10 border border-violet-500/30 rounded-xl flex items-center justify-between animate-in fade-in slide-in-from-top-4 duration-300">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-violet-600 rounded-lg">
+                            <LayoutDashboard className="h-4 w-4 text-white" />
+                        </div>
+                        <div>
+                            <p className="text-white font-medium">Pinning to Dashboard</p>
+                            <p className="text-violet-300 text-xs">Select a saved chart below to add it as a new panel.</p>
+                        </div>
+                        <ArrowRight className="h-4 w-4 text-violet-500 ml-2" />
+                    </div>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => router.push('/saved')}
+                        className="text-violet-400 hover:text-white hover:bg-violet-500/20"
+                    >
+                        <X className="h-4 w-4 mr-2" />
+                        Cancel
+                    </Button>
+                </div>
+            )}
+
             <div className="relative mb-6">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
                 <Input
@@ -265,6 +366,15 @@ export default function SavedQueriesPage() {
                                             title="Discussion"
                                         >
                                             <MessageSquare className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 text-slate-500 hover:text-blue-400 hover:bg-blue-500/10"
+                                            onClick={(e) => openPinDialog(query, e)}
+                                            title="Pin to Dashboard"
+                                        >
+                                            <LayoutDashboard className="h-4 w-4" />
                                         </Button>
                                         <Button
                                             variant="ghost"
@@ -446,6 +556,102 @@ export default function SavedQueriesPage() {
                             </Button>
                         </div>
                     </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Pin to Dashboard Dialog */}
+            <Dialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen}>
+                <DialogContent className="sm:max-w-[425px] bg-slate-900 border-slate-800 text-white">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <LayoutDashboard className="h-5 w-5 text-violet-500" />
+                            Pin to Dashboard
+                        </DialogTitle>
+                        <DialogDescription className="text-slate-400">
+                            Select a dashboard to add this chart to.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="dashboard" className="text-slate-300">Target Dashboard</Label>
+                            {dashboards.length === 0 ? (
+                                <p className="text-sm text-amber-400 bg-amber-400/10 p-3 rounded-lg border border-amber-400/20">
+                                    No dashboards found. Please create a dashboard first.
+                                </p>
+                            ) : (
+                                <Select value={selectedDashboardId} onValueChange={setSelectedDashboardId}>
+                                    <SelectTrigger className="bg-slate-950 border-slate-800 text-white">
+                                        <SelectValue placeholder="Select a dashboard" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-slate-900 border-slate-800 text-white">
+                                        {dashboards.map((d) => (
+                                            <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            )}
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setIsPinDialogOpen(false)} className="text-slate-400">
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handlePinToDashboard}
+                            className="bg-violet-600 hover:bg-violet-700"
+                            disabled={isPinning || !selectedDashboardId}
+                        >
+                            {isPinning ? "Pinning..." : "Pin to Dashboard"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Pin to Dashboard Dialog */}
+            <Dialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen}>
+                <DialogContent className="sm:max-width-[425px] bg-slate-900 border-slate-800 text-white shadow-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <LayoutDashboard className="h-5 w-5 text-violet-500" />
+                            Pin to Dashboard
+                        </DialogTitle>
+                        <DialogDescription className="text-slate-400">
+                            Select a dashboard to add this chart to.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="dashboard" className="text-slate-300">Target Dashboard</Label>
+                            {dashboards.length === 0 ? (
+                                <p className="text-sm text-amber-400 bg-amber-400/10 p-3 rounded-lg border border-amber-400/20">
+                                    No dashboards found. Please create a dashboard first.
+                                </p>
+                            ) : (
+                                <Select value={selectedDashboardId} onValueChange={setSelectedDashboardId}>
+                                    <SelectTrigger className="bg-slate-950 border-slate-800 text-white">
+                                        <SelectValue placeholder="Select a dashboard" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-slate-900 border-slate-800 text-white">
+                                        {dashboards.map((d) => (
+                                            <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            )}
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setIsPinDialogOpen(false)} className="text-slate-400 hover:text-white">
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handlePinToDashboard}
+                            className="bg-violet-600 hover:bg-violet-700"
+                            disabled={isPinning || !selectedDashboardId}
+                        >
+                            {isPinning ? "Pinning..." : "Pin to Dashboard"}
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>

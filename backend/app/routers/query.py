@@ -212,6 +212,24 @@ async def list_saved_queries(
     return db.query(SavedQuery).filter(SavedQuery.user_id == current_user.id).order_by(SavedQuery.created_at.desc()).all()
 
 
+@router.get("/saved-queries/{query_id}", response_model=SavedQueryResponse)
+async def get_saved_query(
+    query_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get details for a specific saved query"""
+    query = db.query(SavedQuery).filter(
+        SavedQuery.id == query_id,
+        SavedQuery.user_id == current_user.id
+    ).first()
+    
+    if not query:
+        raise HTTPException(status_code=404, detail="Saved query not found")
+        
+    return query
+
+
 @router.delete("/saved-queries/{query_id}")
 async def delete_saved_query(
     query_id: UUID,

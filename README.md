@@ -37,6 +37,12 @@ No SQL knowledge required. Just ask, and see your data come to life.
 - **Team Discussion**: Comments and threads on saved queries for collaboration.
 - **Webhooks**: Real-time outbound notifications for team activity (Slack/Discord).
 
+### Phase 4: Advanced BI & Dashboards (Completed ✅)
+- **Dashboard Builder**: Create customizable layouts to combine multiple charts.
+- **Dynamic Panels**: Real-time data execution for every dashboard panel.
+- **Auto-Viz Integration**: Deep integration with the visualization engine for instant insights.
+- **Chart Pinning**: One-click workflow from "Saved Queries" to "Dashboards".
+
 ---
 
 ## Tech Stack
@@ -116,6 +122,7 @@ DATABASE_URL=postgresql://querylite:querylite_secret@localhost:5432/querylite
 
 - **Data Sources Management**: Connect multiple PostgreSQL databases with encrypted connection strings
 - **Natural Language Queries**: Ask questions like "Show monthly revenue trends" 
+- **Dashboard Builder**: Create and customize multi-chart dashboards for real-time monitoring
 - **Auto-Visualization**: Automatically selects Bar, Line, or Donut charts based on data structure
 - **SQL Preview**: View the generated SQL before execution
 - **Multi-LLM Support**: Switch between OpenAI (GPT-4), Anthropic (Claude), and local models (Ollama)

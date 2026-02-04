@@ -251,3 +251,43 @@ class ScheduledReportResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# Dashboard Schemas
+class DashboardPanelBase(BaseModel):
+    saved_query_id: UUID
+    title_override: Optional[str] = None
+    grid_x: int = 0
+    grid_y: int = 0
+    grid_w: int = 4
+    grid_h: int = 3
+
+class DashboardPanelCreate(DashboardPanelBase):
+    pass
+
+class DashboardPanelResponse(DashboardPanelBase):
+    id: UUID
+    dashboard_id: UUID
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class DashboardBase(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+    description: Optional[str] = None
+    workspace_id: Optional[UUID] = None
+    is_public: bool = True
+
+class DashboardCreate(DashboardBase):
+    pass
+
+class DashboardResponse(DashboardBase):
+    id: UUID
+    owner_id: UUID
+    created_at: datetime
+    updated_at: datetime
+    panels: List[DashboardPanelResponse] = []
+
+    class Config:
+        from_attributes = True

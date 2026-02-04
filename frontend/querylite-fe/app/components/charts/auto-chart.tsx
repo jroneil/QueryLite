@@ -13,12 +13,13 @@ interface ChartRecommendation {
 interface AutoChartProps {
     data: Record<string, unknown>[];
     recommendation: ChartRecommendation;
+    compact?: boolean;
 }
 
-export function AutoChart({ data, recommendation }: AutoChartProps) {
+export function AutoChart({ data, recommendation, compact = false }: AutoChartProps) {
     if (!data || data.length === 0) {
         return (
-            <div className="flex items-center justify-center h-64 text-slate-400">
+            <div className="flex items-center justify-center h-full text-slate-400">
                 No data to display
             </div>
         );
@@ -29,8 +30,12 @@ export function AutoChart({ data, recommendation }: AutoChartProps) {
 
     // Common styling for Tremor charts in dark mode
     const commonProps = {
-        className: "h-80",
+        className: "h-full w-full",
         showAnimation: true,
+        showXAxis: !compact,
+        showYAxis: !compact,
+        showGridLines: !compact,
+        showLegend: !compact,
     };
 
     switch (chart_type) {
@@ -45,7 +50,7 @@ export function AutoChart({ data, recommendation }: AutoChartProps) {
                     index={x_column}
                     categories={[y_column]}
                     colors={["violet"]}
-                    yAxisWidth={60}
+                    yAxisWidth={compact ? 0 : 60}
                 />
             );
 
@@ -60,7 +65,7 @@ export function AutoChart({ data, recommendation }: AutoChartProps) {
                     index={x_column}
                     categories={[y_column]}
                     colors={["emerald"]}
-                    yAxisWidth={60}
+                    yAxisWidth={compact ? 0 : 60}
                 />
             );
 
@@ -75,7 +80,7 @@ export function AutoChart({ data, recommendation }: AutoChartProps) {
                     index={x_column}
                     categories={[y_column]}
                     colors={["violet"]}
-                    yAxisWidth={60}
+                    yAxisWidth={compact ? 0 : 60}
                 />
             );
 
@@ -91,6 +96,7 @@ export function AutoChart({ data, recommendation }: AutoChartProps) {
                     category={value_column}
                     colors={["violet", "indigo", "blue", "cyan", "teal"]}
                     variant="pie"
+                    showLabel={!compact}
                 />
             );
 

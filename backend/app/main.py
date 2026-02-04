@@ -71,7 +71,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from app.routers import data_sources, query, auth, workspaces, scheduled_reports
+from app.routers import data_sources, query, auth, workspaces, scheduled_reports, dashboards
 
 # Include routers
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
@@ -79,6 +79,7 @@ app.include_router(data_sources.router, prefix="/api/data-sources", tags=["Data 
 app.include_router(query.router, prefix="/api", tags=["Query"])
 app.include_router(workspaces.router, prefix="/api", tags=["Workspaces"])
 app.include_router(scheduled_reports.router, prefix="/api", tags=["Scheduled Reports"])
+app.include_router(dashboards.router, prefix="/api", tags=["Dashboards"])
 
 
 @app.get("/health")

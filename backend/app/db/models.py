@@ -2,7 +2,7 @@
 SQLAlchemy database models
 """
 
-from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Boolean, JSON
+from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Boolean, Integer, JSON
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 import uuid
@@ -31,6 +31,7 @@ class User(Base):
     saved_queries = relationship("SavedQuery", back_populates="user", cascade="all, delete-orphan")
     audit_logs = relationship("AuditLog", back_populates="user")
     scheduled_reports = relationship("ScheduledReport", back_populates="owner", cascade="all, delete-orphan")
+    dashboards = relationship("Dashboard", back_populates="owner", cascade="all, delete-orphan")
     comments = relationship("Comment", back_populates="user", cascade="all, delete-orphan")
 
 
@@ -170,4 +171,43 @@ class Comment(Base):
 
     user = relationship("User", back_populates="comments")
     saved_query = relationship("SavedQuery", back_populates="comments")
+
+
+class Dashboard(Base):
+    """Model for dashboards containing multiple query panels"""
+    __tablename__ = "dashboards"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=True)
+    owner_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    name = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    is_public = Column(Boolean, default=True) # Shared within workspace
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    owner = relationship("User", back_populates="dashboards")
+    workspace = relationship("Workspace")
+    panels = relationship("DashboardPanel", back_populates="dashboard", cascade="all, delete-orphan")
+
+
+class DashboardPanel(Base):
+    """Model for individual panels within a dashboard"""
+    __tablename__ = "dashboard_panels"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    dashboard_id = Column(UUID(as_uuid=True), ForeignKey("dashboards.id"), nullable=False)
+    saved_query_id = Column(UUID(as_uuid=True), ForeignKey("saved_queries.id"), nullable=False)
+    title_override = Column(String(255), nullable=True)
+    
+    # Layout positioning (grid units)
+    grid_x = Column(Integer, default=0)
+    grid_y = Column(Integer, default=0)
+    grid_w = Column(Integer, default=4)
+    grid_h = Column(Integer, default=3)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    dashboard = relationship("Dashboard", back_populates="panels")
+    saved_query = relationship("SavedQuery")
 

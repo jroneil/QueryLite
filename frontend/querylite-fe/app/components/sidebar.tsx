@@ -44,6 +44,11 @@ const navItems = [
     href: "/saved",
     icon: Heart,
   },
+  {
+    title: "Workspaces",
+    href: "/workspaces",
+    icon: Zap,
+  },
 ];
 
 export function Sidebar() {

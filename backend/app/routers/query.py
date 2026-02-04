@@ -3,8 +3,9 @@ Query router - Natural language to SQL endpoint
 """
 
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from app.config import get_settings
 
 from app.db.database import get_db
 from app.db.models import DataSource, QueryHistory
@@ -31,6 +32,10 @@ async def execute_natural_language_query(
     """
     Execute a natural language query against a connected data source.
     """
+    from app.services.audit_logger import AuditLogger
+    from app.middleware.read_only_enforcer import is_safe_sql
+    from app.config import get_settings
+
     # Get data source and verify ownership
     data_source = db.query(DataSource).filter(
         DataSource.id == request.data_source_id,
@@ -38,12 +43,19 @@ async def execute_natural_language_query(
     ).first()
     
     if not data_source:
-        raise HTTPException(status_code=404, detail="Data source not found or access denied")
+        raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, detail="Data source not found or access denied")
     
-    # ... rest of the logic remains similar but with user scope ...
+    # Audit trail for the request
+    AuditLogger.log_event(
+        db=db,
+        user_id=str(current_user.id),
+        action="query_request",
+        workspace_id=str(data_source.workspace_id) if data_source.workspace_id else None,
+        details={"question": request.question, "data_source_id": str(data_source.id)}
+    )
+
     try:
         connection_string = decrypt_connection_string(data_source.connection_string_encrypted)
-        # Pass data_source_id for caching and enhanced schema lookup
         executor = QueryExecutor(connection_string, data_source_id=str(data_source.id))
         schema_info = executor.get_schema_info()
         table_names = executor.get_table_names()
@@ -59,8 +71,21 @@ async def execute_natural_language_query(
         if not sql_result.sql_query:
             raise HTTPException(status_code=400, detail=f"LLM Error: {sql_result.explanation}")
 
-        # Check for confidence
+        # Phase 3A: Read-Only Enforcement
         settings = get_settings()
+        if settings.enforce_read_only and not is_safe_sql(sql_result.sql_query):
+            AuditLogger.log_event(
+                db=db,
+                user_id=str(current_user.id),
+                action="security_violation_blocked",
+                details={"sql": sql_result.sql_query, "reason": "Non-SELECT statement in read-only mode"}
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, 
+                detail="Security Policy Violation: Only SELECT queries are allowed."
+            )
+
+        # Check for confidence
         if sql_result.confidence < settings.confidence_threshold:
             return QueryResponse(
                 sql_query=sql_result.sql_query,
@@ -74,10 +99,18 @@ async def execute_natural_language_query(
                 refinement_suggestion=llm_service.refine_query(request.question, "", schema_info)
             )
             
+        # Audit log the execution
+        AuditLogger.log_query(
+            db=db,
+            user_id=str(current_user.id),
+            sql=sql_result.sql_query,
+            workspace_id=str(data_source.workspace_id) if data_source.workspace_id else None
+        )
+
         results, execution_time = executor.execute_query(sql_result.sql_query)
         chart_recommendation = executor.recommend_chart_type(results)
         
-        # Save to query history with user_id
+        # Save to query history
         history = QueryHistory(
             user_id=current_user.id,
             data_source_id=request.data_source_id,

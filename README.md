@@ -28,13 +28,14 @@ No SQL knowledge required. Just ask, and see your data come to life.
 - **Confidence Engine**: Real-time confidence scoring with automatic refinement suggestions for low-confidence queries.
 - **Custom Error Handling**: Graceful, user-friendly messaging for complex SQL errors and database timeouts.
 
-### Phase 3: Enterprise Features (Phase 3A Completed)
+### Phase 3: Team Collaboration & Automation (Completed ✅)
 - **Audit Logging**: Comprehensive security audit trail for all queries and configuration changes.
 - **Read-Only Enforcement**: Strict safety middleware to prevent non-SELECT statements.
 - **Team Workspaces**: Secure collaboration environments for sharing data sources and insights.
-- **RBAC (Role-Based Access Control)**: Granular permissions (Admin, Editor, Viewer) for workspace members.
-
-See the [Phase 3 Plan](docs/phase_3_plan.md) for the roadmap of Phase 3B.
+- **RBAC (Role-Based Access Control)**: Granular permissions (Admin, Editor, Viewer).
+- **Scheduled Reports**: Automated email delivery of data insights (CSV + HTML).
+- **Team Discussion**: Comments and threads on saved queries for collaboration.
+- **Webhooks**: Real-time outbound notifications for team activity (Slack/Discord).
 
 ---
 
@@ -120,6 +121,10 @@ DATABASE_URL=postgresql://querylite:querylite_secret@localhost:5432/querylite
 - **Multi-LLM Support**: Switch between OpenAI (GPT-4), Anthropic (Claude), and local models (Ollama)
 - **Schema Intelligence**: Enhanced NL-to-SQL performance with relationship awareness and type inference
 - **Reliability Suite**: Production-ready with rate limiting, query timeouts, and connection pooling
+- **Scheduled Reports**: Automated email delivery of data insights with CSV attachments
+- **Team Collaboration**: Comment threads on saved queries for team-wide insights
+- **Outbound Webhooks**: Real-time HTTP notifications for team activity (Slack/Discord ready)
+- **Toast Notifications**: Interactive UI with real-time feedback and keyboard shortcuts (Ctrl+Enter)
 
 ## Environment Variables
 

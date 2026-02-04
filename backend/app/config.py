@@ -30,6 +30,15 @@ class Settings(BaseSettings):
     # Encryption
     encryption_key: str = "dev-encryption-key-32chars!!"
     
+    # Notification Settings
+    email_provider: str = "smtp"
+    smtp_host: str = "mailhog"
+    smtp_port: int = 1025
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from: str = "reports@querylite.ai"
+    smtp_use_starttls: bool = False
+    
     class Config:
         env_file = ".env"
         case_sensitive = False

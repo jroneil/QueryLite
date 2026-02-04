@@ -13,6 +13,7 @@ from app.models.schemas import QueryRequest, QueryResponse
 from app.services.encryption import decrypt_connection_string
 from app.services.llm_service import get_llm_service
 from app.services.query_executor import QueryExecutor
+from app.services.webhook_service import WebhookService
 
 router = APIRouter()
 
@@ -122,6 +123,19 @@ async def execute_natural_language_query(
         db.commit()
         executor.close()
         
+        # Trigger Webhook
+        WebhookService.trigger_event(
+            db=db,
+            workspace_id=str(data_source.workspace_id) if data_source.workspace_id else None,
+            event_type="query_executed",
+            details={
+                "user": current_user.email,
+                "question": request.question,
+                "row_count": len(results),
+                "execution_time_ms": execution_time
+            }
+        )
+
         return QueryResponse(
             sql_query=sql_result.sql_query,
             explanation=sql_result.explanation,
@@ -173,6 +187,19 @@ async def save_query(
     db.add(saved)
     db.commit()
     db.refresh(saved)
+
+    # Trigger Webhook
+    WebhookService.trigger_event(
+        db=db,
+        workspace_id=str(ds.workspace_id) if ds.workspace_id else None,
+        event_type="query_saved",
+        details={
+            "user": current_user.email,
+            "query_name": saved.name,
+            "natural_language_query": saved.natural_language_query
+        }
+    )
+
     return saved
 
 
@@ -210,4 +237,78 @@ async def check_llm_status():
     llm_service = get_llm_service()
     is_configured = llm_service.is_configured()
     return {"configured": is_configured, "message": "Ready" if is_configured else "Key missing"}
+
+
+# --- Comments Endpoints ---
+from app.db.models import Comment
+from app.models.schemas import CommentCreate, CommentResponse
+
+@router.get("/saved-queries/{query_id}/comments", response_model=List[CommentResponse])
+async def list_comments(
+    query_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """List all comments for a specific saved query"""
+    # Verify query exists (visibility check)
+    query = db.query(SavedQuery).filter(SavedQuery.id == query_id).first()
+    if not query:
+        raise HTTPException(status_code=404, detail="Query not found")
+        
+    comments = db.query(Comment, User.email).join(User, Comment.user_id == User.id).filter(
+        Comment.saved_query_id == query_id
+    ).order_by(Comment.created_at.asc()).all()
+    
+    result = []
+    for c, email in comments:
+        res = CommentResponse.from_orm(c)
+        res.user_name = email.split('@')[0] # Simple username from email
+        result.append(res)
+    return result
+
+
+@router.post("/saved-queries/{query_id}/comments", response_model=CommentResponse)
+async def add_comment(
+    query_id: UUID,
+    request: CommentCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Add a comment to a saved query"""
+    query = db.query(SavedQuery).filter(SavedQuery.id == query_id).first()
+    if not query:
+        raise HTTPException(status_code=404, detail="Query not found")
+        
+    comment = Comment(
+        user_id=current_user.id,
+        saved_query_id=query_id,
+        content=request.content
+    )
+    db.add(comment)
+    db.commit()
+    db.refresh(comment)
+    
+    res = CommentResponse.from_orm(comment)
+    res.user_name = current_user.email.split('@')[0]
+    return res
+
+
+@router.delete("/comments/{comment_id}")
+async def delete_comment(
+    comment_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Delete a comment (owner only)"""
+    comment = db.query(Comment).filter(
+        Comment.id == comment_id,
+        Comment.user_id == current_user.id
+    ).first()
+    
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found or access denied")
+        
+    db.delete(comment)
+    db.commit()
+    return {"message": "Comment deleted"}
 

@@ -12,6 +12,7 @@ import {
   History,
   Heart,
   LogOut,
+  Calendar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,11 @@ const navItems = [
     title: "Saved Queries",
     href: "/saved",
     icon: Heart,
+  },
+  {
+    title: "Scheduled Reports",
+    href: "/scheduled",
+    icon: Calendar,
   },
   {
     title: "Workspaces",

@@ -25,6 +25,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { AutoChart } from "@/app/components/charts/auto-chart";
+import { toast } from "sonner";
+import { authenticatedFetch } from "@/lib/api";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
 interface DataSource {
     id: string;
@@ -33,7 +37,7 @@ interface DataSource {
 }
 
 interface ChartRecommendation {
-    chart_type: "bar" | "line" | "donut" | "table";
+    chart_type: "bar" | "line" | "donut" | "area" | "table";
     x_column?: string;
     y_column?: string;
     category_column?: string;
@@ -49,9 +53,23 @@ interface QueryResponse {
     execution_time_ms: number;
 }
 
-import { authenticatedFetch } from "@/lib/api";
-
 export default function AskPage() {
+    return (
+        <Suspense fallback={
+            <div className="p-8 flex items-center justify-center min-h-[400px]">
+                <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
+            </div>
+        }>
+            <AskPageContent />
+        </Suspense>
+    );
+}
+
+function AskPageContent() {
+    const searchParams = useSearchParams();
+    const urlQuery = searchParams.get("query");
+    const urlDs = searchParams.get("ds");
+
     const [dataSources, setDataSources] = useState<DataSource[]>([]);
     const [selectedSource, setSelectedSource] = useState<string>("");
     const [question, setQuestion] = useState("");
@@ -62,10 +80,37 @@ export default function AskPage() {
     const [saving, setSaving] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
 
+    // Initial load of parameters from URL
+    useEffect(() => {
+        if (urlQuery) {
+            setQuestion(urlQuery);
+            setResult(null); // Clear previous result to allow auto-run
+        }
+        if (urlDs) {
+            setSelectedSource(urlDs);
+        }
+    }, [urlQuery, urlDs]);
+
     useEffect(() => {
         fetchDataSources();
         checkLLMStatus();
     }, []);
+
+    // Auto-run query if both params are present and data sources are loaded
+    useEffect(() => {
+        const canAutoRun =
+            urlQuery &&
+            urlDs &&
+            dataSources.length > 0 &&
+            question === urlQuery &&
+            selectedSource === urlDs &&
+            !loading &&
+            !result;
+
+        if (canAutoRun) {
+            handleSubmit();
+        }
+    }, [dataSources, urlQuery, urlDs, question, selectedSource, loading, result]);
 
     const fetchDataSources = async () => {
         try {
@@ -94,14 +139,16 @@ export default function AskPage() {
         }
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleSubmit = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
         if (!selectedSource || !question.trim()) return;
 
         setLoading(true);
         setError(null);
         setResult(null);
         setSaveSuccess(false);
+
+        const loadingToast = toast.loading("Thinking...");
 
         try {
             const response = await authenticatedFetch("/api/query", {
@@ -115,12 +162,15 @@ export default function AskPage() {
             if (response.ok) {
                 const data = await response.json();
                 setResult(data);
+                toast.success("Query successful!", { id: loadingToast });
             } else {
                 const errorData = await response.json();
                 setError(errorData.detail || "Failed to execute query");
+                toast.error(errorData.detail || "Failed to execute query", { id: loadingToast });
             }
         } catch (error) {
             setError("Failed to connect to the API");
+            toast.error("Failed to connect to the API", { id: loadingToast });
         } finally {
             setLoading(false);
         }
@@ -133,7 +183,7 @@ export default function AskPage() {
             const response = await authenticatedFetch("/api/saved-queries", {
                 method: "POST",
                 body: JSON.stringify({
-                    name: question.length > 30 ? question.substring(0, 30) + "..." : question,
+                    name: question.length > 40 ? question.substring(0, 40) + "..." : question,
                     data_source_id: selectedSource,
                     natural_language_query: question,
                     generated_sql: result.sql_query,
@@ -142,11 +192,22 @@ export default function AskPage() {
             });
             if (response.ok) {
                 setSaveSuccess(true);
+                toast.success("Query saved to favorites!");
+            } else {
+                toast.error("Failed to save query");
             }
         } catch (err) {
             console.error("Failed to save query:", err);
+            toast.error("Failed to save query");
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            handleSubmit();
         }
     };
 
@@ -230,6 +291,7 @@ export default function AskPage() {
                                 id="question"
                                 value={question}
                                 onChange={(e) => setQuestion(e.target.value)}
+                                onKeyDown={handleKeyDown}
                                 placeholder="e.g., Show me the monthly revenue trends for the past year"
                                 rows={3}
                                 className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
@@ -346,7 +408,7 @@ export default function AskPage() {
                                         onClick={() => {
                                             const csv = [
                                                 Object.keys(result.results[0]).join(","),
-                                                ...result.results.map(row => Object.values(row).join(","))
+                                                ...result.results.map((row: any) => Object.values(row).join(","))
                                             ].join("\n");
                                             const blob = new Blob([csv], { type: "text/csv" });
                                             const url = window.URL.createObjectURL(blob);
@@ -375,7 +437,6 @@ export default function AskPage() {
                     </Card>
                 </div>
             )}
-
         </div>
     );
 }

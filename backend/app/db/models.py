@@ -2,7 +2,7 @@
 SQLAlchemy database models
 """
 
-from sqlalchemy import Column, String, Text, DateTime, ForeignKey
+from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Boolean, JSON
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 import uuid
@@ -30,6 +30,8 @@ class User(Base):
     queries = relationship("QueryHistory", back_populates="user", cascade="all, delete-orphan")
     saved_queries = relationship("SavedQuery", back_populates="user", cascade="all, delete-orphan")
     audit_logs = relationship("AuditLog", back_populates="user")
+    scheduled_reports = relationship("ScheduledReport", back_populates="owner", cascade="all, delete-orphan")
+    comments = relationship("Comment", back_populates="user", cascade="all, delete-orphan")
 
 
 class Workspace(Base):
@@ -40,6 +42,8 @@ class Workspace(Base):
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     owner_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    webhook_url = Column(String(512), nullable=True)
+    webhook_enabled = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     members = relationship("WorkspaceMember", back_populates="workspace", cascade="all, delete-orphan")
@@ -116,6 +120,7 @@ class SavedQuery(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     user = relationship("User", back_populates="saved_queries")
+    comments = relationship("Comment", back_populates="saved_query", cascade="all, delete-orphan")
 
 
 class AuditLog(Base):
@@ -131,4 +136,38 @@ class AuditLog(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     user = relationship("User", back_populates="audit_logs")
+
+
+class ScheduledReport(Base):
+    """Model for scheduled query reports delivered via email"""
+    __tablename__ = "scheduled_reports"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    owner_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    saved_query_id = Column(UUID(as_uuid=True), ForeignKey("saved_queries.id"), nullable=False)
+    name = Column(String(255), nullable=False)
+    schedule_cron = Column(String(100), nullable=False) # Cron expression
+    recipient_emails = Column(JSON, nullable=False) # List of strings
+    is_active = Column(Boolean, default=True)
+    last_run_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    owner = relationship("User", back_populates="scheduled_reports")
+    saved_query = relationship("SavedQuery")
+
+
+class Comment(Base):
+    """Model for comments on saved queries"""
+    __tablename__ = "query_comments"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    saved_query_id = Column(UUID(as_uuid=True), ForeignKey("saved_queries.id"), nullable=False)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    user = relationship("User", back_populates="comments")
+    saved_query = relationship("SavedQuery", back_populates="comments")
 

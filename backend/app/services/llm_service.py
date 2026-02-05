@@ -43,26 +43,33 @@ class LLMService:
         question: str, 
         schema_info: str,
         table_names: list[str],
-        conversation_history: Optional[List[dict]] = None
+        conversation_history: Optional[List[dict]] = None,
+        db_type: str = "postgresql"
     ) -> SQLGenerationResult:
         """
-        Generate a SELECT SQL query from natural language question.
+        Generate a SELECT query from natural language question.
         """
         if not self._provider:
             self._set_provider()
             
-        return self._provider.generate_sql(question, schema_info, table_names, conversation_history)
+        return self._provider.generate_sql(question, schema_info, table_names, conversation_history, db_type)
     
-    def validate_sql(self, sql: str) -> tuple[bool, str]:
+    def validate_sql(self, sql: str, db_type: str = "postgresql") -> tuple[bool, str]:
         """
-        Validate SQL syntax and safety.
-        
-        Returns:
-            Tuple of (is_valid, error_message)
+        Validate query syntax and safety.
         """
         if not sql:
             return False, "Query is empty"
             
+        if db_type == "mongodb":
+            # Basic JSON validation for MQL
+            try:
+                import json
+                json.loads(sql)
+                return True, ""
+            except Exception:
+                return False, "Invalid MQL JSON"
+
         # Parse SQL
         parsed = sqlparse.parse(sql)
         if not parsed:

@@ -91,7 +91,9 @@ class DataSource(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
-    connection_string_encrypted = Column(Text, nullable=False)
+    type = Column(String(50), nullable=False, default="postgresql") # postgresql, duckdb
+    connection_string_encrypted = Column(Text, nullable=True) # Nullable for local files
+    file_path = Column(Text, nullable=True) # Path to local CSV/Excel file
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -128,9 +130,12 @@ class SavedQuery(Base):
     generated_sql = Column(Text, nullable=True)
     chart_type = Column(String(50), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    user = relationship("User", back_populates="saved_queries")
+    user = relationship("User")
+    data_source = relationship("DataSource")
     comments = relationship("Comment", back_populates="saved_query", cascade="all, delete-orphan")
+    versions = relationship("SavedQueryVersion", back_populates="saved_query", cascade="all, delete-orphan", order_by="SavedQueryVersion.version_number.desc()")
 
 
 class AuditLog(Base):
@@ -267,3 +272,20 @@ class ThreadMessage(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     thread = relationship("ConversationThread", back_populates="messages")
+
+
+class SavedQueryVersion(Base):
+    """Model for tracking versions of a saved query (Time Machine)"""
+    __tablename__ = "saved_query_versions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    saved_query_id = Column(UUID(as_uuid=True), ForeignKey("saved_queries.id"), nullable=False)
+    version_number = Column(Integer, nullable=False)
+    sql_query = Column(Text, nullable=False)
+    natural_language_query = Column(Text, nullable=False)
+    chart_settings = Column(JSON, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_by_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+
+    saved_query = relationship("SavedQuery", back_populates="versions")
+    created_by = relationship("User")

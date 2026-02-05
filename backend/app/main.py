@@ -14,6 +14,7 @@ from app.routers import (
     dashboards,
     data_sources,
     insights,
+    local_files,
     query,
     scheduled_reports,
     threads,
@@ -89,6 +90,7 @@ app.include_router(dashboards.router, prefix="/api", tags=["Dashboards"])
 app.include_router(insights.router, prefix="/api", tags=["Insights"])
 app.include_router(dashboard_filters.router, prefix="/api", tags=["Dashboard Filters"])
 app.include_router(threads.router, prefix="/api", tags=["Threads"])
+app.include_router(local_files.router, prefix="/api", tags=["Local Files"])
 
 
 @app.get("/health")

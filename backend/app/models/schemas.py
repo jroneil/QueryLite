@@ -46,7 +46,9 @@ class DataSourceCreate(BaseModel):
     """Schema for creating a new data source"""
     name: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
-    connection_string: str = Field(..., min_length=1)
+    connection_string: Optional[str] = None
+    type: str = "postgresql" # postgresql, duckdb
+    file_path: Optional[str] = None
     workspace_id: Optional[UUID] = None
 
 
@@ -57,6 +59,8 @@ class DataSourceResponse(BaseModel):
     workspace_id: Optional[UUID] = None
     name: str
     description: Optional[str]
+    type: str
+    file_path: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -385,3 +389,18 @@ class ConversationThreadResponse(BaseModel):
 
 class ThreadUpdate(BaseModel):
     title: str
+
+
+class SavedQueryVersionResponse(BaseModel):
+    """Schema for saved query version history"""
+    id: UUID
+    saved_query_id: UUID
+    version_number: int
+    sql_query: str
+    natural_language_query: str
+    chart_settings: Optional[dict[str, Any]] = None
+    created_at: datetime
+    created_by_id: Optional[UUID] = None
+
+    class Config:
+        from_attributes = True

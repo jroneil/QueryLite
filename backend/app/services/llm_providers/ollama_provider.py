@@ -36,9 +36,22 @@ IMPORTANT RULES:
         question: str, 
         schema_info: str, 
         table_names: List[str],
-        conversation_history: Optional[List[dict]] = None
+        conversation_history: Optional[List[dict]] = None,
+        db_type: str = "postgresql"
     ) -> SQLGenerationResult:
-        full_prompt = f"{self.system_prompt}\n\n"
+        
+        dialect_prompt = "PostgreSQL SELECT queries"
+        if db_type == "mysql":
+            dialect_prompt = "MySQL SELECT queries"
+        elif db_type == "duckdb":
+            dialect_prompt = "DuckDB-compatible SQL SELECT queries"
+        elif db_type == "mongodb":
+            dialect_prompt = """MongoDB Query Language (MQL) JSON strings.
+The JSON string MUST include a "collection" key and a "filter" key. Optionally "projection", "sort", and "limit".
+Example: {"collection": "users", "filter": {"age": {"$gt": 20}}}"""
+
+        system_prompt = self.system_prompt.replace("PostgreSQL SELECT queries", dialect_prompt)
+        full_prompt = f"{system_prompt}\n\n"
         
         if conversation_history:
             for msg in conversation_history:
@@ -46,14 +59,15 @@ IMPORTANT RULES:
                 content = msg.get("content", "")
                 full_prompt += f"{role.upper()}: {content}\n"
 
-        user_prompt = f"""Database Schema:
+        user_prompt = f"""Database Type: {db_type}
+Database Schema:
 {schema_info}
 
-Available Tables: {', '.join(table_names)}
+Available Tables/Collections: {', '.join(table_names)}
 
 Question: {question}
 
-Generate the SQL query:"""
+Generate the {db_type if db_type != 'mongodb' else 'MQL'} query:"""
 
         full_prompt += f"USER: {user_prompt}\nASSISTANT:"
 

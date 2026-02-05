@@ -13,7 +13,8 @@ class LLMProvider(ABC):
         question: str, 
         schema_info: str, 
         table_names: List[str],
-        conversation_history: Optional[List[dict]] = None
+        conversation_history: Optional[List[dict]] = None,
+        db_type: str = "postgresql"
     ) -> SQLGenerationResult:
         """Generate SQL from natural language question"""
         pass

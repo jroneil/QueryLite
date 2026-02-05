@@ -1,18 +1,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Database, Plus, Trash2, CheckCircle, XCircle, Loader2, RefreshCw } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { FileUploadZone } from "@/components/data-sources/FileUploadZone";
+import { FileText, Database, Plus, Trash2, CheckCircle, XCircle, Loader2, RefreshCw, Upload } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 
 interface DataSource {
     id: string;
     name: string;
     description: string | null;
+    type: string;
+    file_path?: string;
     created_at: string;
     updated_at: string;
 }
@@ -37,6 +40,8 @@ export default function DataSourcesPage() {
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [connectionString, setConnectionString] = useState("");
+    const [provisionMode, setProvisionMode] = useState<"database" | "file">("database");
+    const [dbType, setDbType] = useState<"postgresql" | "mysql" | "mongodb">("postgresql");
 
     // Fetch data sources on mount
     useEffect(() => {
@@ -68,6 +73,7 @@ export default function DataSourcesPage() {
                     name,
                     description: description || null,
                     connection_string: connectionString,
+                    type: dbType,
                 }),
             });
 
@@ -135,7 +141,7 @@ export default function DataSourcesPage() {
                         </h1>
                     </div>
                     <p className="text-slate-400 font-medium opacity-80 pl-1 max-w-xl">
-                        Forge connections to your PostgreSQL architecture and provision them for AI analysis.
+                        Forge connections to your data architecture and provision them for AI analysis.
                     </p>
                 </div>
 
@@ -155,89 +161,148 @@ export default function DataSourcesPage() {
                         <div className="absolute top-0 right-0 -translate-y-12 translate-x-12 h-48 w-48 bg-indigo-600/10 blur-[80px] rounded-full" />
 
                         <CardHeader className="p-8 border-b border-white/5 relative z-10">
-                            <CardTitle className="text-xl font-bold text-white flex items-center gap-2">
-                                <Plus className="h-5 w-5 text-indigo-400" />
-                                Connection Parameters
-                            </CardTitle>
-                            <CardDescription className="text-slate-500 font-medium">
-                                Define the protocol and credentials for your data source.
-                            </CardDescription>
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                                <div>
+                                    <CardTitle className="text-xl font-bold text-white flex items-center gap-2">
+                                        <Plus className="h-5 w-5 text-indigo-400" />
+                                        Provision New Source
+                                    </CardTitle>
+                                    <CardDescription className="text-slate-500 font-medium">
+                                        Choose your protocol and establish a connection.
+                                    </CardDescription>
+                                </div>
+                                <div className="flex bg-slate-950 p-1 rounded-xl border border-white/5">
+                                    <button
+                                        onClick={() => setProvisionMode("database")}
+                                        className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${provisionMode === 'database' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}
+                                    >
+                                        Database
+                                    </button>
+                                    <button
+                                        onClick={() => setProvisionMode("file")}
+                                        className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${provisionMode === 'file' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}
+                                    >
+                                        Local File
+                                    </button>
+                                </div>
+                            </div>
                         </CardHeader>
                         <CardContent className="p-8 relative z-10">
-                            <form onSubmit={handleSubmit} className="space-y-8">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <div className="space-y-3">
-                                        <Label htmlFor="name" className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] pl-1">
-                                            Foundry Alias
+                            {provisionMode === "database" ? (
+                                <form onSubmit={handleSubmit} className="space-y-8">
+                                    <div className="space-y-4">
+                                        <Label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] pl-1">
+                                            Select Engine
                                         </Label>
-                                        <Input
-                                            id="name"
-                                            value={name}
-                                            onChange={(e) => setName(e.target.value)}
-                                            placeholder="E.g. Nexus Production Master"
-                                            required
-                                            className="h-12 bg-slate-950/50 border-slate-800 text-white rounded-xl focus:ring-indigo-500/20 shadow-inner px-4 text-sm"
-                                        />
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                            {[
+                                                { id: 'postgresql', name: 'PostgreSQL', icon: Database, color: 'text-indigo-400' },
+                                                { id: 'mysql', name: 'MySQL', icon: Database, color: 'text-blue-400' },
+                                                { id: 'mongodb', name: 'MongoDB', icon: Database, color: 'text-emerald-400' },
+                                            ].map((type) => (
+                                                <button
+                                                    key={type.id}
+                                                    type="button"
+                                                    onClick={() => setDbType(type.id as any)}
+                                                    className={`flex items-center gap-3 p-4 rounded-xl border transition-all ${dbType === type.id ? 'bg-indigo-600/10 border-indigo-500/50' : 'bg-slate-950/30 border-white/5 hover:border-white/10'}`}
+                                                >
+                                                    <type.icon className={`h-5 w-5 ${type.color}`} />
+                                                    <span className={`text-[10px] font-black uppercase tracking-widest ${dbType === type.id ? 'text-white' : 'text-slate-500'}`}>
+                                                        {type.name}
+                                                    </span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <div className="space-y-3">
+                                            <Label htmlFor="name" className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] pl-1">
+                                                Foundry Alias
+                                            </Label>
+                                            <Input
+                                                id="name"
+                                                value={name}
+                                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
+                                                placeholder="E.g. Nexus Production Master"
+                                                required
+                                                className="h-12 bg-slate-950/50 border-slate-800 text-white rounded-xl focus:ring-indigo-500/20 shadow-inner px-4 text-sm"
+                                            />
+                                        </div>
+                                        <div className="space-y-3">
+                                            <Label htmlFor="description" className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] pl-1">
+                                                Operational Brief
+                                            </Label>
+                                            <Input
+                                                id="description"
+                                                value={description}
+                                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDescription(e.target.value)}
+                                                placeholder="E.g. Core telemetry for user interactions..."
+                                                className="h-12 bg-slate-950/50 border-slate-800 text-white rounded-xl focus:ring-indigo-500/20 shadow-inner px-4 text-sm"
+                                            />
+                                        </div>
                                     </div>
                                     <div className="space-y-3">
-                                        <Label htmlFor="description" className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] pl-1">
-                                            Operational Brief
+                                        <Label htmlFor="connectionString" className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] pl-1">
+                                            Protocol Specification (Connection URL)
                                         </Label>
-                                        <Input
-                                            id="description"
-                                            value={description}
-                                            onChange={(e) => setDescription(e.target.value)}
-                                            placeholder="E.g. Core telemetry for user interactions..."
-                                            className="h-12 bg-slate-950/50 border-slate-800 text-white rounded-xl focus:ring-indigo-500/20 shadow-inner px-4 text-sm"
-                                        />
+                                        <div className="relative group">
+                                            <Textarea
+                                                id="connectionString"
+                                                value={connectionString}
+                                                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setConnectionString(e.target.value)}
+                                                placeholder={
+                                                    dbType === 'mongodb'
+                                                        ? "mongodb://user:password@host:27017/dbname"
+                                                        : dbType === 'mysql'
+                                                            ? "mysql://user:password@host:3306/dbname"
+                                                            : "postgresql://user:password@host:5432/dbname"
+                                                }
+                                                required
+                                                className="min-h-[100px] bg-slate-950/50 border-slate-800 text-indigo-100 rounded-2xl focus:ring-indigo-500/20 shadow-inner p-6 font-mono text-sm leading-relaxed"
+                                            />
+                                        </div>
+                                        <div className="flex items-center gap-2 px-1">
+                                            <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-none">
+                                                Encryption Layer Active
+                                            </p>
+                                        </div>
                                     </div>
-                                </div>
-                                <div className="space-y-3">
-                                    <Label htmlFor="connectionString" className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] pl-1">
-                                        Protocol Specification (Connection URL)
-                                    </Label>
-                                    <div className="relative group">
-                                        <Textarea
-                                            id="connectionString"
-                                            value={connectionString}
-                                            onChange={(e) => setConnectionString(e.target.value)}
-                                            placeholder="postgresql://user:password@host:5432/dbname"
-                                            required
-                                            className="min-h-[100px] bg-slate-950/50 border-slate-800 text-indigo-100 rounded-2xl focus:ring-indigo-500/20 shadow-inner p-6 font-mono text-sm leading-relaxed"
-                                        />
+                                    <div className="flex gap-4 pt-4">
+                                        <Button
+                                            type="submit"
+                                            disabled={formLoading}
+                                            className="h-12 px-8 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-indigo-600/20 transition-all border-t border-white/5"
+                                        >
+                                            {formLoading ? (
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <>
+                                                    <Database className="mr-2 h-4 w-4" />
+                                                    Establish Nexus
+                                                </>
+                                            )}
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            onClick={() => setShowForm(false)}
+                                            className="h-12 px-8 text-slate-500 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase tracking-widest text-[10px]"
+                                        >
+                                            Abort
+                                        </Button>
                                     </div>
-                                    <div className="flex items-center gap-2 px-1">
-                                        <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-none">
-                                            Encryption Layer Active
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="flex gap-4 pt-4">
-                                    <Button
-                                        type="submit"
-                                        disabled={formLoading}
-                                        className="h-12 px-8 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-indigo-600/20 transition-all border-t border-white/5"
-                                    >
-                                        {formLoading ? (
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                        ) : (
-                                            <>
-                                                <Database className="mr-2 h-4 w-4" />
-                                                Establish Nexus
-                                            </>
-                                        )}
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        onClick={() => setShowForm(false)}
-                                        className="h-12 px-8 text-slate-500 hover:text-white hover:bg-white/5 rounded-xl font-bold uppercase tracking-widest text-[10px]"
-                                    >
-                                        Abort
-                                    </Button>
-                                </div>
-                            </form>
+                                </form>
+                            ) : (
+                                <FileUploadZone
+                                    onSuccess={() => {
+                                        setShowForm(false);
+                                        fetchDataSources();
+                                    }}
+                                    onCancel={() => setShowForm(false)}
+                                />
+                            )}
                         </CardContent>
                     </Card>
                 </div>
@@ -262,7 +327,7 @@ export default function DataSourcesPage() {
                     </div>
                     <h3 className="text-2xl font-black text-white tracking-tight mb-2">No Active Foundry</h3>
                     <p className="text-slate-500 font-medium max-w-sm mb-10 leading-relaxed">
-                        The intelligence engine requires a PostgreSQL source to begin synthesis.
+                        The intelligence engine requires a PostgreSQL, MySQL, or MongoDB source to begin synthesis.
                     </p>
                     <Button
                         onClick={() => setShowForm(true)}
@@ -282,14 +347,28 @@ export default function DataSourcesPage() {
                             <div className="flex flex-col md:flex-row md:items-center justify-between p-8 gap-6">
                                 <div className="flex items-center gap-6">
                                     <div className="h-16 w-16 rounded-2xl bg-slate-950/50 border border-slate-800 flex items-center justify-center group-hover:border-indigo-500/30 group-hover:shadow-[0_0_15px_rgba(99,102,241,0.2)] transition-all">
-                                        <Database className="h-7 w-7 text-slate-500 group-hover:text-indigo-400 transition-colors" />
+                                        {ds.type === 'duckdb' ? (
+                                            <FileText className="h-7 w-7 text-slate-500 group-hover:text-amber-400 transition-colors" />
+                                        ) : ds.type === 'mongodb' ? (
+                                            <Database className="h-7 w-7 text-slate-500 group-hover:text-emerald-400 transition-colors" />
+                                        ) : ds.type === 'mysql' ? (
+                                            <Database className="h-7 w-7 text-slate-500 group-hover:text-blue-400 transition-colors" />
+                                        ) : (
+                                            <Database className="h-7 w-7 text-slate-500 group-hover:text-indigo-400 transition-colors" />
+                                        )}
                                     </div>
                                     <div>
                                         <div className="flex items-center gap-3">
                                             <h3 className="text-xl font-black text-white tracking-tight group-hover:text-indigo-400 transition-colors">{ds.name}</h3>
-                                            <Badge variant="outline" className="bg-emerald-500/5 text-emerald-500/80 border-emerald-500/20 text-[8px] uppercase font-black px-2 tracking-widest rounded-lg">
-                                                ACTIVE
-                                            </Badge>
+                                            {ds.type === 'duckdb' ? (
+                                                <Badge variant="outline" className="bg-amber-500/5 text-amber-500/80 border-amber-500/20 text-[8px] uppercase font-black px-2 tracking-widest rounded-lg">
+                                                    LOCAL_FILE
+                                                </Badge>
+                                            ) : (
+                                                <Badge variant="outline" className={`bg-${ds.type === 'mongodb' ? 'emerald' : ds.type === 'mysql' ? 'blue' : 'indigo'}-500/5 text-${ds.type === 'mongodb' ? 'emerald' : ds.type === 'mysql' ? 'blue' : 'indigo'}-500/80 border-${ds.type === 'mongodb' ? 'emerald' : ds.type === 'mysql' ? 'blue' : 'indigo'}-500/20 text-[8px] uppercase font-black px-2 tracking-widest rounded-lg`}>
+                                                    {ds.type?.toUpperCase()}
+                                                </Badge>
+                                            )}
                                         </div>
                                         <p className="text-slate-400 font-medium text-sm mt-1 opacity-80 group-hover:opacity-100 transition-opacity">
                                             {ds.description || "Synthesizing core database telemetry."}

@@ -95,8 +95,18 @@ class ReportScheduler:
 
             # 3. Execute SQL Query
             try:
-                connection_string = decrypt_connection_string(data_source.connection_string_encrypted)
-                executor = QueryExecutor(connection_string, data_source_id=str(data_source.id))
+                if data_source.type == "duckdb":
+                    executor = QueryExecutor(
+                        ds_type="duckdb", 
+                        file_path=data_source.file_path, 
+                        data_source_id=str(data_source.id)
+                    )
+                else:
+                    connection_string = decrypt_connection_string(data_source.connection_string_encrypted)
+                    executor = QueryExecutor(
+                        connection_string, 
+                        data_source_id=str(data_source.id)
+                    )
                 results, _ = executor.execute_query(saved_query.generated_sql)
                 executor.close()
             except Exception as e:

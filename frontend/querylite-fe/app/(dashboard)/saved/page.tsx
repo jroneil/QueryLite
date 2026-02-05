@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { Heart, Play, Trash2, Database, Code, BarChart3, Search, Calendar, Clock, MessageSquare, Send, User, LayoutDashboard, ArrowRight, X } from "lucide-react";
+import { Heart, Play, Trash2, Database, Code, BarChart3, Search, Calendar, Clock, MessageSquare, Send, User, LayoutDashboard, ArrowRight, X, History as HistoryIcon } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { authenticatedFetch } from "@/lib/api";
 import { toast } from "sonner";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
+import { QueryVersionHistory } from "@/components/saved-queries/QueryVersionHistory";
 import {
     Dialog,
     DialogContent,
@@ -83,6 +84,9 @@ function SavedQueriesContent() {
     const [dashboards, setDashboards] = useState<any[]>([]);
     const [selectedDashboardId, setSelectedDashboardId] = useState<string>("");
     const [isPinning, setIsPinning] = useState(false);
+
+    // Versioning states
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
     useEffect(() => {
         fetchSavedQueries();
@@ -213,6 +217,13 @@ function SavedQueriesContent() {
         setSelectedQuery(query);
         fetchComments(query.id);
         setIsCommentsOpen(true);
+    };
+
+    const openHistory = (query: SavedQuery, e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setSelectedQuery(query);
+        setIsHistoryOpen(true);
     };
 
     const handleDelete = async (id: string, e: React.MouseEvent) => {
@@ -370,6 +381,15 @@ function SavedQueriesContent() {
                                         <Button
                                             variant="ghost"
                                             size="icon"
+                                            className="h-8 w-8 text-slate-500 hover:text-amber-400 hover:bg-amber-500/10"
+                                            onClick={(e) => openHistory(query, e)}
+                                            title="Time Machine (History)"
+                                        >
+                                            <HistoryIcon className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
                                             className="h-8 w-8 text-slate-500 hover:text-blue-400 hover:bg-blue-500/10"
                                             onClick={(e) => openPinDialog(query, e)}
                                             title="Pin to Dashboard"
@@ -405,7 +425,7 @@ function SavedQueriesContent() {
                                 <div className="space-y-3">
                                     <div className="flex items-center gap-2 text-xs text-slate-500">
                                         <Database className="h-3 w-3" />
-                                        <span>PostgreSQL Database</span>
+                                        <span>Data Source Entry</span>
                                     </div>
                                     <div className="flex items-center gap-2 text-xs text-slate-500">
                                         <BarChart3 className="h-3 w-3" />
@@ -607,49 +627,32 @@ function SavedQueriesContent() {
                 </DialogContent>
             </Dialog>
 
-            {/* Pin to Dashboard Dialog */}
-            <Dialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen}>
-                <DialogContent className="sm:max-width-[425px] bg-slate-900 border-slate-800 text-white shadow-2xl">
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            <LayoutDashboard className="h-5 w-5 text-violet-500" />
-                            Pin to Dashboard
+            {/* Time Machine / History Dialog */}
+            <Dialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
+                <DialogContent className="bg-slate-900 border-slate-800 text-white sm:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col p-6">
+                    <DialogHeader className="mb-4">
+                        <DialogTitle className="flex items-center gap-2 text-2xl font-black">
+                            <HistoryIcon className="h-6 w-6 text-amber-500" />
+                            Time Machine: {selectedQuery?.name}
                         </DialogTitle>
-                        <DialogDescription className="text-slate-400">
-                            Select a dashboard to add this chart to.
+                        <DialogDescription className="text-slate-400 font-medium">
+                            Browse historical iterations and instantly revert to any previous state.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="dashboard" className="text-slate-300">Target Dashboard</Label>
-                            {dashboards.length === 0 ? (
-                                <p className="text-sm text-amber-400 bg-amber-400/10 p-3 rounded-lg border border-amber-400/20">
-                                    No dashboards found. Please create a dashboard first.
-                                </p>
-                            ) : (
-                                <Select value={selectedDashboardId} onValueChange={setSelectedDashboardId}>
-                                    <SelectTrigger className="bg-slate-950 border-slate-800 text-white">
-                                        <SelectValue placeholder="Select a dashboard" />
-                                    </SelectTrigger>
-                                    <SelectContent className="bg-slate-900 border-slate-800 text-white">
-                                        {dashboards.map((d) => (
-                                            <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            )}
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button variant="ghost" onClick={() => setIsPinDialogOpen(false)} className="text-slate-400 hover:text-white">
-                            Cancel
-                        </Button>
-                        <Button
-                            onClick={handlePinToDashboard}
-                            className="bg-violet-600 hover:bg-violet-700"
-                            disabled={isPinning || !selectedDashboardId}
-                        >
-                            {isPinning ? "Pinning..." : "Pin to Dashboard"}
+
+                    {selectedQuery && (
+                        <QueryVersionHistory
+                            queryId={selectedQuery.id}
+                            onRevertSuccess={() => {
+                                setIsHistoryOpen(false);
+                                fetchSavedQueries();
+                            }}
+                        />
+                    )}
+
+                    <DialogFooter className="mt-6 pt-6 border-t border-white/5">
+                        <Button variant="outline" onClick={() => setIsHistoryOpen(false)} className="bg-slate-950/50 border-slate-800 hover:bg-white/5 text-slate-400 hover:text-white uppercase text-[10px] font-black tracking-widest px-8">
+                            Close Logs
                         </Button>
                     </DialogFooter>
                 </DialogContent>

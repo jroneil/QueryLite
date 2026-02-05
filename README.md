@@ -54,10 +54,15 @@ No SQL knowledge required. Just ask, and see your data come to life.
 - **System Telemetry**: Real-time status indicators and engine monitoring footers for an operational feel.
 - **Robust Sizing**: Refined the visualization engine for pixel-perfect chart scaling and responsiveness.
 
-### Phase 6: Deep Analytical Memory (In Progress 🚀)
-- **Phase 6.1: Conversational Memory**: Multi-turn chat interface that remembers context across follow-up questions.
+### Phase 6.1: Deep Analytical Memory (Completed ✅)
+- **Conversational Memory**: Multi-turn chat interface that remembers context across follow-up questions.
 - **Thread Management**: Persistent conversation threads with search and history management.
-- **Contextual Context Propagation**: LLM prompts automatically include recent Q&A history for coherent analysis.
+
+### Phase 6.2: Core Platform Power (In Progress 🚀)
+- **Universal Connectors**: Support for PostgreSQL, MySQL, and DuckDB (for local CSV/Excel/Parquet files).
+- **NoSQL Support**: Native MongoDB integration with schema sampling and MQL (MongoDB Query Language) generation.
+- **Query Versioning**: Time Machine for saved queries—track evolution and revert to previous logic.
+- **Connector SDK**: Standardized `BaseConnector` interface for easy expansion to any data source.
 
 ---
 
@@ -65,8 +70,19 @@ No SQL knowledge required. Just ask, and see your data come to life.
 
 - **Frontend**: Next.js 15+ (App Router), Tailwind CSS 4, shadcn/ui, Tremor
 - **Backend**: Python FastAPI (Async)
-- **Database**: PostgreSQL 17
+- **Database Support**: PostgreSQL, MySQL, DuckDB, MongoDB
 - **LLM**: Multi-provider support (OpenAI, Anthropic, Ollama)
+
+## 📂 Multi-Database Architecture
+
+QueryLite supports a wide range of analytical sources out of the box:
+
+- **PostgreSQL**: Full schema analysis and relationship detection.
+- **MySQL**: Standard SQL support via SQLAlchemy.
+- **DuckDB**: Analyze local **CSV**, **Excel**, and **Parquet** files with zero setup.
+- **MongoDB**: Infer schemas from document samples and generate MQL (JSON) queries automatically.
+
+Interested in adding another database? See our [Connector Contribution Guide](docs/CONTRIBUTING_CONNECTORS.md).
 
 ## 🚀 Quick Start
 
@@ -207,8 +223,9 @@ DATABASE_URL=postgresql://querylite:querylite_secret@localhost:5432/querylite
 
 ## Features
 
-- **Data Sources Management**: Connect multiple PostgreSQL databases with encrypted connection strings
-- **Natural Language Queries**: Ask questions like "Show monthly revenue trends" 
+- **Multi-Database Support**: Connect PostgreSQL, MySQL, and MongoDB.
+- **Analyze Local Files**: Upload CSV/Excel/Parquet files for instant DuckDB-powered analysis.
+- **Natural Language Queries**: Ask questions like "Show monthly revenue trends" - now in SQL or MQL.
 - **Dashboard Builder**: Create and customize multi-chart dashboards for real-time monitoring
 - **Auto-Visualization**: Automatically selects Bar, Line, or Donut charts based on data structure
 - **SQL Preview**: View the generated SQL before execution

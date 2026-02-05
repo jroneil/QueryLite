@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db.database import get_db
-from app.db.models import Comment, ConversationThread, DataSource, QueryHistory, SavedQuery, ThreadMessage, User
+from app.db.models import Comment, ConversationThread, DataSource, QueryHistory, SavedQuery, SavedQueryVersion, ThreadMessage, User
 from app.models.schemas import (
     ChartRecommendation,
     CommentCreate,
@@ -22,6 +22,7 @@ from app.models.schemas import (
     QueryResponse,
     SavedQueryCreate,
     SavedQueryResponse,
+    SavedQueryVersionResponse,
 )
 from app.routers.auth_deps import get_current_user
 from app.services.encryption import decrypt_connection_string
@@ -63,13 +64,33 @@ async def execute_natural_language_query(
     )
 
     try:
-        connection_string = decrypt_connection_string(data_source.connection_string_encrypted)
-        executor = QueryExecutor(connection_string, data_source_id=str(data_source.id))
+        if data_source.type == "duckdb":
+            executor = QueryExecutor(
+                ds_type="duckdb", 
+                file_path=data_source.file_path, 
+                data_source_id=str(data_source.id)
+            )
+        elif data_source.type == "mongodb":
+            connection_string = decrypt_connection_string(data_source.connection_string_encrypted)
+            executor = QueryExecutor(
+                connection_string,
+                ds_type="mongodb",
+                data_source_id=str(data_source.id)
+            )
+        else: # postgresql, mysql
+            connection_string = decrypt_connection_string(data_source.connection_string_encrypted)
+            executor = QueryExecutor(
+                connection_string, 
+                ds_type=data_source.type,
+                data_source_id=str(data_source.id)
+            )
+            
         schema_info = executor.get_schema_info()
         table_names = executor.get_table_names()
         
         if not table_names:
-            raise HTTPException(status_code=400, detail="No tables found in the database")
+            detail = "No tables found in the database" if data_source.type != "mongodb" else "No collections found in MongoDB"
+            raise HTTPException(status_code=400, detail=detail)
         
         # Incorporate global filters into the natural language question for the LLM
         refined_question = request.question
@@ -101,23 +122,30 @@ async def execute_natural_language_query(
         if not llm_service.is_configured():
             raise HTTPException(status_code=503, detail="LLM service not configured")
         
-        sql_result = llm_service.generate_sql(refined_question, schema_info, table_names, conversation_history)
+        sql_result = llm_service.generate_sql(
+            refined_question, 
+            schema_info, 
+            table_names, 
+            conversation_history,
+            db_type=data_source.type
+        )
         if not sql_result.sql_query:
             raise HTTPException(status_code=400, detail=f"LLM Error: {sql_result.explanation}")
 
-        # Phase 3A: Read-Only Enforcement
-        settings = get_settings()
-        if settings.enforce_read_only and not is_safe_sql(sql_result.sql_query):
-            AuditLogger.log_event(
-                db=db,
-                user_id=str(current_user.id),
-                action="security_violation_blocked",
-                details={"sql": sql_result.sql_query, "reason": "Non-SELECT statement in read-only mode"}
-            )
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, 
-                detail="Security Policy Violation: Only SELECT queries are allowed."
-            )
+        # Phase 3A: Read-Only Enforcement (SQL only)
+        if data_source.type != "mongodb":
+            settings = get_settings()
+            if settings.enforce_read_only and not is_safe_sql(sql_result.sql_query):
+                AuditLogger.log_event(
+                    db=db,
+                    user_id=str(current_user.id),
+                    action="security_violation_blocked",
+                    details={"sql": sql_result.sql_query, "reason": "Non-SELECT statement in read-only mode"}
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN, 
+                    detail="Security Policy Violation: Only SELECT queries are allowed."
+                )
 
         # Check for confidence
         if sql_result.confidence < settings.confidence_threshold:
@@ -277,6 +305,18 @@ async def save_query(
     db.commit()
     db.refresh(saved)
 
+    # Create first version
+    first_version = SavedQueryVersion(
+        saved_query_id=saved.id,
+        version_number=1,
+        sql_query=saved.generated_sql or "",
+        natural_language_query=saved.natural_language_query,
+        chart_settings={"chart_type": saved.chart_type},
+        created_by_id=current_user.id
+    )
+    db.add(first_version)
+    db.commit()
+
     # Trigger Webhook
     WebhookService.trigger_event(
         db=db,
@@ -416,3 +456,119 @@ async def delete_comment(
     db.delete(comment)
     db.commit()
     return {"message": "Comment deleted"}
+
+
+# --- Query Versioning (Time Machine) Endpoints ---
+
+@router.get("/saved-queries/{query_id}/versions", response_model=List[SavedQueryVersionResponse])
+async def list_query_versions(
+    query_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """List historical versions of a saved query"""
+    query = db.query(SavedQuery).filter(
+        SavedQuery.id == query_id,
+        SavedQuery.user_id == current_user.id
+    ).first()
+    
+    if not query:
+        raise HTTPException(status_code=404, detail="Saved query not found")
+        
+    return db.query(SavedQueryVersion).filter(
+        SavedQueryVersion.saved_query_id == query_id
+    ).order_by(SavedQueryVersion.version_number.desc()).all()
+
+
+@router.post("/saved-queries/{query_id}/revert/{version_id}", response_model=SavedQueryResponse)
+async def revert_query_version(
+    query_id: UUID,
+    version_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Revert a saved query to a specific historical version"""
+    query = db.query(SavedQuery).filter(
+        SavedQuery.id == query_id,
+        SavedQuery.user_id == current_user.id
+    ).first()
+    
+    if not query:
+        raise HTTPException(status_code=404, detail="Saved query not found")
+        
+    version = db.query(SavedQueryVersion).filter(
+        SavedQueryVersion.id == version_id,
+        SavedQueryVersion.saved_query_id == query_id
+    ).first()
+    
+    if not version:
+        raise HTTPException(status_code=404, detail="Version not found")
+        
+    # Revert query fields
+    query.generated_sql = version.sql_query
+    query.natural_language_query = version.natural_language_query
+    if version.chart_settings:
+        query.chart_type = version.chart_settings.get("chart_type")
+    
+    # Create a NEW version record for the revert action itself to maintain complete audit trail
+    # We increment from current max
+    last_v = db.query(SavedQueryVersion).filter(
+        SavedQueryVersion.saved_query_id == query.id
+    ).order_by(SavedQueryVersion.version_number.desc()).first()
+    
+    new_v = SavedQueryVersion(
+        saved_query_id=query.id,
+        version_number=(last_v.version_number + 1) if last_v else 1,
+        sql_query=query.generated_sql,
+        natural_language_query=query.natural_language_query,
+        chart_settings={"chart_type": query.chart_type, "reverted_from_version": version.version_number},
+        created_by_id=current_user.id
+    )
+    
+    db.add(new_v)
+    db.commit()
+    db.refresh(query)
+    return query
+
+
+@router.put("/saved-queries/{query_id}", response_model=SavedQueryResponse)
+async def update_saved_query(
+    query_id: UUID,
+    request: SavedQueryCreate, # Reuse create schema for update
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Update a saved query and create a new version"""
+    query = db.query(SavedQuery).filter(
+        SavedQuery.id == query_id,
+        SavedQuery.user_id == current_user.id
+    ).first()
+    
+    if not query:
+        raise HTTPException(status_code=404, detail="Saved query not found")
+        
+    # Update fields
+    query.name = request.name
+    query.natural_language_query = request.natural_language_query
+    query.generated_sql = request.generated_sql
+    query.chart_type = request.chart_type
+    
+    # Create new version
+    last_v = db.query(SavedQueryVersion).filter(
+        SavedQueryVersion.saved_query_id == query.id
+    ).order_by(SavedQueryVersion.version_number.desc()).first()
+    
+    new_v = SavedQueryVersion(
+        saved_query_id=query.id,
+        version_number=(last_v.version_number + 1) if last_v else 1,
+        sql_query=query.generated_sql,
+        natural_language_query=query.natural_language_query,
+        chart_settings={"chart_type": query.chart_type},
+        created_by_id=current_user.id
+    )
+    
+    db.add(new_v)
+    db.commit()
+    db.refresh(query)
+    
+    return query

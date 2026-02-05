@@ -130,8 +130,12 @@ async def test_data_source_connection(
     data_source = await get_data_source(data_source_id, db, current_user)
     
     try:
-        connection_string = decrypt_connection_string(data_source.connection_string_encrypted)
-        executor = QueryExecutor(connection_string)
+        if data_source.type == "duckdb":
+            executor = QueryExecutor(ds_type="duckdb", file_path=data_source.file_path)
+        else:
+            connection_string = decrypt_connection_string(data_source.connection_string_encrypted)
+            executor = QueryExecutor(connection_string)
+            
         success, message, tables = executor.test_connection()
         executor.close()
         

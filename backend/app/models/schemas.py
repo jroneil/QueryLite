@@ -102,6 +102,7 @@ class QueryRequest(BaseModel):
     question: str = Field(..., min_length=1)
     data_source_id: UUID
     filters: Optional[dict[str, Any]] = None
+    thread_id: Optional[UUID] = None # Added for Phase 6.1
 
 
 class QueryHistoryResponse(BaseModel):
@@ -340,3 +341,47 @@ class DashboardResponse(DashboardBase):
 
     class Config:
         from_attributes = True
+
+# Conversational Memory Schemas (Phase 6.1)
+class ThreadMessageCreate(BaseModel):
+    role: str # "user" | "assistant"
+    content: str
+    sql_query: Optional[str] = None
+    chart_recommendation: Optional[ChartRecommendation] = None
+
+
+class ThreadMessageResponse(BaseModel):
+    id: UUID
+    thread_id: UUID
+    role: str
+    content: str
+    sql_query: Optional[str]
+    chart_recommendation: Optional[ChartRecommendation] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ConversationThreadCreate(BaseModel):
+    data_source_id: UUID
+    title: str
+    workspace_id: Optional[UUID] = None
+
+
+class ConversationThreadResponse(BaseModel):
+    id: UUID
+    user_id: UUID
+    data_source_id: UUID
+    workspace_id: Optional[UUID]
+    title: str
+    created_at: datetime
+    updated_at: datetime
+    messages: List[ThreadMessageResponse] = []
+
+    class Config:
+        from_attributes = True
+
+
+class ThreadUpdate(BaseModel):
+    title: str

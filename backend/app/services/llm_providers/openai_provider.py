@@ -41,7 +41,8 @@ The confidence score should reflect:
         self, 
         question: str, 
         schema_info: str, 
-        table_names: List[str]
+        table_names: List[str],
+        conversation_history: Optional[List[dict]] = None
     ) -> SQLGenerationResult:
         user_prompt = f"""Database Schema:
 {schema_info}
@@ -52,13 +53,21 @@ Question: {question}
 
 Generate the SQL query:"""
 
+        messages = [{"role": "system", "content": self.system_prompt}]
+        
+        if conversation_history:
+            for msg in conversation_history:
+                messages.append({
+                    "role": msg.get("role", "user"),
+                    "content": msg.get("content", "")
+                })
+
+        messages.append({"role": "user", "content": user_prompt})
+
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
-                messages=[
-                    {"role": "system", "content": self.system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
+                messages=messages,
                 temperature=0.1,
                 max_tokens=1000
             )

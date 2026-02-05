@@ -35,8 +35,17 @@ IMPORTANT RULES:
         self, 
         question: str, 
         schema_info: str, 
-        table_names: List[str]
+        table_names: List[str],
+        conversation_history: Optional[List[dict]] = None
     ) -> SQLGenerationResult:
+        full_prompt = f"{self.system_prompt}\n\n"
+        
+        if conversation_history:
+            for msg in conversation_history:
+                role = msg.get("role", "user")
+                content = msg.get("content", "")
+                full_prompt += f"{role.upper()}: {content}\n"
+
         user_prompt = f"""Database Schema:
 {schema_info}
 
@@ -46,13 +55,15 @@ Question: {question}
 
 Generate the SQL query:"""
 
+        full_prompt += f"USER: {user_prompt}\nASSISTANT:"
+
         try:
             with httpx.Client(timeout=60.0) as client:
                 response = client.post(
                     f"{self.base_url}/api/generate",
                     json={
                         "model": self.model,
-                        "prompt": f"{self.system_prompt}\n\n{user_prompt}",
+                        "prompt": full_prompt,
                         "stream": False,
                         "format": "json"
                     }

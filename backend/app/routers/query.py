@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db.database import get_db
-from app.db.models import Comment, DataSource, QueryHistory, SavedQuery, User
+from app.db.models import Comment, ConversationThread, DataSource, QueryHistory, SavedQuery, ThreadMessage, User
 from app.models.schemas import (
     ChartRecommendation,
     CommentCreate,
@@ -81,11 +81,27 @@ async def execute_natural_language_query(
             if filter_strs:
                 refined_question += " where " + " and ".join(filter_strs)
 
+        # Phase 6.1: Conversational Memory
+        conversation_history = []
+        thread = None
+        if request.thread_id:
+            thread = db.query(ConversationThread).filter(
+                ConversationThread.id == request.thread_id,
+                ConversationThread.user_id == current_user.id
+            ).first()
+            if thread:
+                # Build history for LLM - limit to last 10 messages for context window
+                for msg in thread.messages[-10:]:
+                    conversation_history.append({
+                        "role": msg.role,
+                        "content": msg.content
+                    })
+
         llm_service = get_llm_service()
         if not llm_service.is_configured():
             raise HTTPException(status_code=503, detail="LLM service not configured")
         
-        sql_result = llm_service.generate_sql(refined_question, schema_info, table_names)
+        sql_result = llm_service.generate_sql(refined_question, schema_info, table_names, conversation_history)
         if not sql_result.sql_query:
             raise HTTPException(status_code=400, detail=f"LLM Error: {sql_result.explanation}")
 
@@ -156,6 +172,31 @@ async def execute_natural_language_query(
             chart_type=chart_recommendation.chart_type
         )
         db.add(history)
+        
+        # Save to conversation thread if applicable
+        if thread:
+            # Add user message
+            user_msg = ThreadMessage(
+                thread_id=thread.id,
+                role="user",
+                content=request.question
+            )
+            db.add(user_msg)
+            
+            # Add assistant message
+            assistant_msg = ThreadMessage(
+                thread_id=thread.id,
+                role="assistant",
+                content=sql_result.explanation,
+                sql_query=sql_result.sql_query,
+                chart_recommendation=chart_recommendation.dict()
+            )
+            db.add(assistant_msg)
+            
+            # Update thread timing
+            from sqlalchemy.sql import func
+            thread.updated_at = func.now()
+
         db.commit()
         executor.close()
         

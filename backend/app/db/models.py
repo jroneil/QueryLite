@@ -41,6 +41,7 @@ class User(Base):
     scheduled_reports = relationship("ScheduledReport", back_populates="owner", cascade="all, delete-orphan")
     dashboards = relationship("Dashboard", back_populates="owner", cascade="all, delete-orphan")
     comments = relationship("Comment", back_populates="user", cascade="all, delete-orphan")
+    threads = relationship("ConversationThread", back_populates="user", cascade="all, delete-orphan")
 
 
 class Workspace(Base):
@@ -235,3 +236,34 @@ class DashboardPanel(Base):
     dashboard = relationship("Dashboard", back_populates="panels")
     saved_query = relationship("SavedQuery")
 
+
+class ConversationThread(Base):
+    """Model for multi-turn conversation threads"""
+    __tablename__ = "conversation_threads"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    data_source_id = Column(UUID(as_uuid=True), ForeignKey("data_sources.id"), nullable=False)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=True)
+    title = Column(String(255), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    user = relationship("User", back_populates="threads")
+    messages = relationship("ThreadMessage", back_populates="thread", cascade="all, delete-orphan", order_by="ThreadMessage.created_at")
+    data_source = relationship("DataSource")
+
+
+class ThreadMessage(Base):
+    """Model for individual messages within a conversation thread"""
+    __tablename__ = "thread_messages"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    thread_id = Column(UUID(as_uuid=True), ForeignKey("conversation_threads.id"), nullable=False)
+    role = Column(String(50), nullable=False)  # "user" | "assistant"
+    content = Column(Text, nullable=False)    # The text question or explanation
+    sql_query = Column(Text, nullable=True)    # The generated SQL if applicable
+    chart_recommendation = Column(JSON, nullable=True) # Recommended chart settings
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    thread = relationship("ConversationThread", back_populates="messages")

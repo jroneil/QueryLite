@@ -42,7 +42,8 @@ class LLMService:
         self, 
         question: str, 
         schema_info: str,
-        table_names: list[str]
+        table_names: list[str],
+        conversation_history: Optional[List[dict]] = None
     ) -> SQLGenerationResult:
         """
         Generate a SELECT SQL query from natural language question.
@@ -50,7 +51,7 @@ class LLMService:
         if not self._provider:
             self._set_provider()
             
-        return self._provider.generate_sql(question, schema_info, table_names)
+        return self._provider.generate_sql(question, schema_info, table_names, conversation_history)
     
     def validate_sql(self, sql: str) -> tuple[bool, str]:
         """

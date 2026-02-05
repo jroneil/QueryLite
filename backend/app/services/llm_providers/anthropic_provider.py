@@ -41,7 +41,8 @@ The confidence score should reflect:
         self, 
         question: str, 
         schema_info: str, 
-        table_names: List[str]
+        table_names: List[str],
+        conversation_history: Optional[List[dict]] = None
     ) -> SQLGenerationResult:
         user_prompt = f"""Database Schema:
 {schema_info}
@@ -52,15 +53,23 @@ Question: {question}
 
 Generate the SQL query:"""
 
+        messages = []
+        if conversation_history:
+            for msg in conversation_history:
+                messages.append({
+                    "role": msg.get("role", "user"),
+                    "content": msg.get("content", "")
+                })
+
+        messages.append({"role": "user", "content": user_prompt})
+
         try:
             response = self.client.messages.create(
                 model=self.model,
                 max_tokens=1000,
                 temperature=0.1,
                 system=self.system_prompt,
-                messages=[
-                    {"role": "user", "content": user_prompt}
-                ]
+                messages=messages
             )
             
             content = response.content[0].text

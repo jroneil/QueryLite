@@ -51,11 +51,13 @@ No SQL knowledge required. Just ask, and see your data come to life.
 - **Chart Pinning**: One-click workflow from "Saved Queries" to "Dashboards".
 
 ### Phase 5: Aesthetic Excellence & Executive Intelligence (Completed ✅)
-- **Executive Intel**: AI-generated dashboard narratives that synthesize across multiple panels.
-- **Premium Glassmorphism UI**: High-end visual overhaul using `backdrop-blur`, refined typography, and modern aesthetics.
-- **Command Center Architecture**: Redesigned "Ask", "Dashboards", and "Data Sources" pages into a cohesive "Foundry" design system.
-- **Robust Sizing**: Refined the visualization engine for pixel-perfect chart scaling and responsiveness.
 - **System Telemetry**: Real-time status indicators and engine monitoring footers for an operational feel.
+- **Robust Sizing**: Refined the visualization engine for pixel-perfect chart scaling and responsiveness.
+
+### Phase 6: Deep Analytical Memory (In Progress 🚀)
+- **Phase 6.1: Conversational Memory**: Multi-turn chat interface that remembers context across follow-up questions.
+- **Thread Management**: Persistent conversation threads with search and history management.
+- **Contextual Context Propagation**: LLM prompts automatically include recent Q&A history for coherent analysis.
 
 ---
 
@@ -216,6 +218,7 @@ DATABASE_URL=postgresql://querylite:querylite_secret@localhost:5432/querylite
 - **Scheduled Reports**: Automated email delivery of data insights with CSV attachments
 - **Team Collaboration**: Comment threads on saved queries for team-wide insights
 - **Outbound Webhooks**: Real-time HTTP notifications for team activity (Slack/Discord ready)
+- **Conversational Memory**: Multi-turn analytical sessions that remember context across follow-up questions
 - **Toast Notifications**: Interactive UI with real-time feedback and keyboard shortcuts (Ctrl+Enter)
 
 ## Environment Variables

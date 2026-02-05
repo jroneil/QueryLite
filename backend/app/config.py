@@ -2,8 +2,9 @@
 Pydantic Settings for application configuration
 """
 
-from pydantic_settings import BaseSettings
 from functools import lru_cache
+
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -38,6 +39,10 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_from: str = "reports@querylite.ai"
     smtp_use_starttls: bool = False
+    
+    # Caching
+    redis_host: str = "redis"
+    redis_port: int = 6379
     
     class Config:
         env_file = ".env"

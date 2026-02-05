@@ -2,11 +2,12 @@
 Pydantic schemas for API request/response models
 """
 
-from pydantic import BaseModel, Field, field_validator
-from typing import Optional, List, Any
 import json
 from datetime import datetime
+from typing import Any, List, Optional
 from uuid import UUID
+
+from pydantic import BaseModel, Field, field_validator
 
 
 # User Schemas
@@ -100,6 +101,8 @@ class QueryRequest(BaseModel):
     """Schema for natural language query request"""
     question: str = Field(..., min_length=1)
     data_source_id: UUID
+    filters: Optional[dict[str, Any]] = None
+    thread_id: Optional[UUID] = None # Added for Phase 6.1
 
 
 class QueryHistoryResponse(BaseModel):
@@ -282,12 +285,103 @@ class DashboardBase(BaseModel):
 class DashboardCreate(DashboardBase):
     pass
 
+    class Config:
+        from_attributes = True
+
+
+# Insight Schemas (Phase 5)
+class ChartNarrativeRequest(BaseModel):
+    """Schema for requesting a narrative for a single chart"""
+    data: List[dict[str, Any]]
+    chart_type: str
+    question: str
+    explanation: Optional[str] = None
+
+
+class DashboardNarrativeRequest(BaseModel):
+    """Schema for requesting an aggregate narrative for a dashboard"""
+    dashboard_id: UUID
+
+
+class NarrativeResponse(BaseModel):
+    """Schema for AI-generated narrative response"""
+    narrative: str
+    generated_at: datetime
+
+
+# Dashboard Filter Schemas (Phase 5)
+class DashboardFilterBase(BaseModel):
+    filter_type: str = Field(..., pattern="^(date_range|category)$")
+    column_name: str
+    label: str
+    default_value: Optional[str] = None
+
+
+class DashboardFilterCreate(DashboardFilterBase):
+    pass
+
+
+class DashboardFilterResponse(DashboardFilterBase):
+    id: UUID
+    dashboard_id: UUID
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# Updated Dashboard Schemas to include filters
 class DashboardResponse(DashboardBase):
     id: UUID
     owner_id: UUID
     created_at: datetime
     updated_at: datetime
     panels: List[DashboardPanelResponse] = []
+    filters: List[DashboardFilterResponse] = []
 
     class Config:
         from_attributes = True
+
+# Conversational Memory Schemas (Phase 6.1)
+class ThreadMessageCreate(BaseModel):
+    role: str # "user" | "assistant"
+    content: str
+    sql_query: Optional[str] = None
+    chart_recommendation: Optional[ChartRecommendation] = None
+
+
+class ThreadMessageResponse(BaseModel):
+    id: UUID
+    thread_id: UUID
+    role: str
+    content: str
+    sql_query: Optional[str]
+    chart_recommendation: Optional[ChartRecommendation] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ConversationThreadCreate(BaseModel):
+    data_source_id: UUID
+    title: str
+    workspace_id: Optional[UUID] = None
+
+
+class ConversationThreadResponse(BaseModel):
+    id: UUID
+    user_id: UUID
+    data_source_id: UUID
+    workspace_id: Optional[UUID]
+    title: str
+    created_at: datetime
+    updated_at: datetime
+    messages: List[ThreadMessageResponse] = []
+
+    class Config:
+        from_attributes = True
+
+
+class ThreadUpdate(BaseModel):
+    title: str

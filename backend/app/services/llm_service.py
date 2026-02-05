@@ -3,13 +3,18 @@ LLM Service for Natural Language to SQL translation
 Supports multiple providers: OpenAI, Anthropic, and local via Ollama
 """
 
-import json
-from typing import Optional, List
+from typing import Any, List, Optional
+
 import sqlparse
 
 from app.config import get_settings
 from app.models.schemas import SQLGenerationResult
-from app.services.llm_providers import OpenAIProvider, AnthropicProvider, OllamaProvider, LLMProvider
+from app.services.llm_providers import (
+    AnthropicProvider,
+    LLMProvider,
+    OllamaProvider,
+    OpenAIProvider,
+)
 
 
 class LLMService:
@@ -37,7 +42,8 @@ class LLMService:
         self, 
         question: str, 
         schema_info: str,
-        table_names: list[str]
+        table_names: list[str],
+        conversation_history: Optional[List[dict]] = None
     ) -> SQLGenerationResult:
         """
         Generate a SELECT SQL query from natural language question.
@@ -45,7 +51,7 @@ class LLMService:
         if not self._provider:
             self._set_provider()
             
-        return self._provider.generate_sql(question, schema_info, table_names)
+        return self._provider.generate_sql(question, schema_info, table_names, conversation_history)
     
     def validate_sql(self, sql: str) -> tuple[bool, str]:
         """
@@ -78,9 +84,23 @@ class LLMService:
         """
         Suggest a corrected natural language query or SQL based on an error.
         """
-        # This could call the LLM again to suggest a fix
-        # For now, we'll keep it simple or implement a quick LLM call
-        return f"Query failed with: {sql_error}. Perhaps try specifying columns more clearly?"
+        if not self._provider:
+            self._set_provider()
+        return self._provider.refine_query(question, sql_error, schema_info)
+
+    def generate_insight(
+        self,
+        data_sample: List[dict[str, Any]],
+        question: str,
+        chart_type: str,
+        explanation: Optional[str] = None
+    ) -> str:
+        """
+        Generate a natural language narrative/insight from data results.
+        """
+        if not self._provider:
+            self._set_provider()
+        return self._provider.generate_insight(data_sample, question, chart_type, explanation)
 
     def is_configured(self) -> bool:
         """Check if the current LLM provider is properly configured"""

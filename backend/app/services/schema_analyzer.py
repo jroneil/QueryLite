@@ -1,7 +1,10 @@
-from sqlalchemy import inspect, text
-from typing import List, Dict, Any, Optional
-from app.models.schema_models import EnhancedTable, EnhancedColumn, TableRelationship
 import re
+from typing import List
+
+from sqlalchemy import inspect
+
+from app.models.schema_models import EnhancedColumn, EnhancedTable, TableRelationship
+
 
 class SchemaAnalyzer:
     """Service for advanced database schema analysis"""

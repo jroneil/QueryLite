@@ -2,25 +2,26 @@
 Data Sources router - CRUD operations for database connections
 """
 
-from uuid import UUID
 from typing import List
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.db.models import DataSource
-from app.models.schemas import DataSourceCreate, DataSourceResponse, DataSourceTestResult
-from app.services.encryption import encrypt_connection_string, decrypt_connection_string
-from app.services.query_executor import QueryExecutor
-
+from app.db.models import DataSource, User, WorkspaceMember
+from app.models.schemas import (
+    DataSourceCreate,
+    DataSourceResponse,
+    DataSourceTestResult,
+)
 from app.routers.auth_deps import get_current_user
-from app.db.models import User
+from app.services.encryption import decrypt_connection_string, encrypt_connection_string
+from app.services.query_executor import QueryExecutor
+from app.services.rbac import RBACService
 
 router = APIRouter()
 
-
-from app.services.rbac import RBACService
-from app.db.models import WorkspaceMember
 
 @router.post("/", response_model=DataSourceResponse)
 async def create_data_source(
@@ -61,7 +62,7 @@ async def list_data_sources(
     # 1. Private data sources
     private = db.query(DataSource).filter(
         DataSource.user_id == current_user.id,
-        DataSource.workspace_id == None
+        DataSource.workspace_id.is_(None)
     ).all()
     
     # 2. Team data sources via workspace memberships

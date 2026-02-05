@@ -68,7 +68,7 @@
 ### AI-Powered Insights
 - [ ] Automatic anomaly detection
 - [ ] Trend analysis and forecasting
-- [ ] Natural language summaries of results (Auto-Narrative)
+- [x] Natural language summaries of results (Auto-Narrative)
 - [ ] "Explain this data" feature (Deep Dive Analysis)
 - [ ] Anomaly detection & alerting
 
@@ -87,10 +87,10 @@
 | Enhancement | Effort | Impact |
 |-------------|--------|--------|
 | Dark/light mode toggle | Low | Medium |
-| Mobile responsive design | Medium | High |
+| Mobile responsive design | Medium | High | [x] |
 | Keyboard shortcuts | Low | Medium | [x] |
 | Copy SQL to clipboard button | Low | High | [x] |
-| Loading skeleton states | Low | Medium | [ ] |
+| Loading skeleton states | Low | Medium | [x] |
 | Toast notifications | Low | Medium | [x] |
 
 ---

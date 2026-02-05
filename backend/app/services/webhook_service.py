@@ -1,8 +1,11 @@
-import httpx
 import asyncio
 from typing import Any, Dict, Optional
-from app.db.models import Workspace
+
+import httpx
 from sqlalchemy.orm import Session
+
+from app.db.models import Workspace
+
 
 class WebhookService:
     """Service to handle outbound webhooks for workspace events"""

@@ -122,155 +122,186 @@ export default function DashboardsPage() {
     );
 
     return (
-        <div className="p-8">
-            <div className="flex justify-between items-center mb-8">
-                <div>
-                    <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
-                        <LayoutDashboard className="h-8 w-8 text-violet-500" />
-                        Dashboards
-                    </h1>
-                    <p className="text-slate-400">Visualize your key metrics in one place</p>
+        <div className="max-w-[1600px] mx-auto p-4 md:p-8 space-y-10 animate-in fade-in duration-700">
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 pb-2">
+                <div className="space-y-2">
+                    <div className="flex items-center gap-3">
+                        <div className="h-12 w-12 rounded-2xl bg-violet-600/10 border border-violet-500/20 flex items-center justify-center">
+                            <LayoutDashboard className="h-6 w-6 text-violet-400" />
+                        </div>
+                        <h1 className="text-4xl font-black text-white tracking-tight">Intelligence <span className="text-violet-500">Hub</span></h1>
+                    </div>
+                    <p className="text-slate-400 font-medium opacity-80 pl-1">Your centralized command center for data visualizations and insights.</p>
                 </div>
+
                 <Button
                     onClick={() => setIsCreateDialogOpen(true)}
-                    className="bg-violet-600 hover:bg-violet-700 shadow-lg shadow-violet-500/20"
+                    className="h-12 px-6 bg-violet-600 hover:bg-violet-500 text-white rounded-2xl font-bold uppercase tracking-widest text-xs shadow-lg shadow-violet-600/20 transition-all border-t border-white/10 group"
                 >
-                    <Plus className="h-4 w-4 mr-2" />
+                    <Plus className="h-4 w-4 mr-2 group-hover:rotate-90 transition-transform" />
                     New Dashboard
                 </Button>
             </div>
 
-            <div className="relative mb-6">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
+            {/* Controls Bar */}
+            <div className="relative group max-w-2xl">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Search className="h-4 w-4 text-slate-500 group-focus-within:text-violet-400 transition-colors" />
+                </div>
                 <Input
-                    placeholder="Search dashboards..."
-                    className="bg-slate-900/50 border-slate-800 text-white pl-10 h-11 focus:ring-violet-500/50"
+                    placeholder="Search your intelligence hub..."
+                    className="bg-slate-900/40 border-slate-800 focus:border-violet-500/50 text-white pl-12 h-14 rounded-2xl shadow-inner backdrop-blur-sm transition-all text-base placeholder:text-slate-600"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                 />
             </div>
 
             {loading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {[1, 2, 3].map(i => (
-                        <div key={i} className="h-64 bg-slate-900/50 border border-slate-800 animate-pulse rounded-2xl" />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                    {[1, 2, 3, 4].map(i => (
+                        <div key={i} className="h-72 bg-slate-900/40 border border-slate-800/50 animate-pulse rounded-[2rem]" />
                     ))}
                 </div>
             ) : filteredDashboards.length === 0 ? (
-                <Card className="bg-slate-900/30 border-slate-800 border-dashed">
-                    <CardContent className="flex flex-col items-center justify-center py-20">
-                        <Grid className="h-16 w-16 text-slate-700 mb-6" />
-                        <h3 className="text-xl font-medium text-slate-300">No dashboards found</h3>
-                        <p className="text-slate-500 mt-2 text-center max-w-sm mb-8">
-                            Create your first dashboard to combine multiple query results into a single view.
-                        </p>
-                        <Button
-                            onClick={() => setIsCreateDialogOpen(true)}
-                            variant="outline"
-                            className="border-slate-700 text-slate-300 hover:bg-slate-800"
-                        >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Create Dashboard
-                        </Button>
-                    </CardContent>
-                </Card>
+                <div className="py-24 flex flex-col items-center justify-center text-center">
+                    <div className="relative mb-8">
+                        <div className="absolute inset-0 bg-violet-500/20 blur-[60px] rounded-full" />
+                        <div className="relative h-24 w-24 rounded-[2rem] bg-slate-900 border border-slate-800 flex items-center justify-center shadow-2xl">
+                            <Grid className="h-10 w-10 text-slate-700" />
+                        </div>
+                    </div>
+                    <h3 className="text-2xl font-black text-white tracking-tight mb-2">No Command Centers Found</h3>
+                    <p className="text-slate-500 font-medium max-w-sm mb-10 leading-relaxed">
+                        Start your journey by creating a dashboard to synthesize query results into executive visuals.
+                    </p>
+                    <Button
+                        onClick={() => setIsCreateDialogOpen(true)}
+                        className="rounded-2xl h-12 px-8 bg-slate-900 border border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white transition-all font-bold uppercase tracking-widest text-xs"
+                    >
+                        <Plus className="h-4 w-4 mr-3" />
+                        Create Initial Hub
+                    </Button>
+                </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                     {filteredDashboards.map((dashboard) => (
-                        <Link key={dashboard.id} href={`/dashboards/${dashboard.id}`}>
-                            <Card className="bg-slate-900/50 border-slate-800 hover:border-violet-500/50 transition-all duration-300 group cursor-pointer overflow-hidden h-full flex flex-col shadow-lg hover:shadow-violet-500/5">
-                                <CardHeader className="pb-3 px-6 pt-6">
+                        <Link key={dashboard.id} href={`/dashboards/${dashboard.id}`} className="group h-full">
+                            <div className="relative h-full bg-slate-900/40 backdrop-blur-md border border-slate-800/50 rounded-[2rem] overflow-hidden transition-all duration-500 hover:border-violet-500/40 hover:shadow-[0_0_40px_rgba(139,92,246,0.1)] flex flex-col">
+                                <div className="p-8 pb-4 space-y-4">
                                     <div className="flex justify-between items-start">
-                                        <CardTitle className="text-white text-xl group-hover:text-violet-400 transition-colors">
-                                            {dashboard.name}
-                                        </CardTitle>
-                                        <Badge variant="outline" className="bg-slate-950/50 border-slate-800 text-slate-500 text-[10px] uppercase font-bold">
+                                        <div className="h-10 w-10 rounded-xl bg-slate-950/50 border border-slate-800 flex items-center justify-center group-hover:border-violet-500/40 group-hover:shadow-[0_0_15px_rgba(139,92,246,0.2)] transition-all">
+                                            <LayoutDashboard className="h-5 w-5 text-slate-500 group-hover:text-violet-400 transition-colors" />
+                                        </div>
+                                        <Badge variant="outline" className="bg-slate-950/50 border-slate-800/50 text-slate-600 text-[9px] uppercase font-black tracking-widest rounded-lg px-2 group-hover:border-violet-500/20 group-hover:text-violet-500/60 transition-all">
                                             {dashboard.is_public ? "Public" : "Private"}
                                         </Badge>
                                     </div>
-                                    <CardDescription className="text-slate-400 line-clamp-2 mt-2">
-                                        {dashboard.description || "No description provided"}
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="flex-1 py-4 px-6">
-                                    <div className="h-32 bg-slate-950/50 rounded-xl border border-slate-800/50 flex items-center justify-center group-hover:bg-slate-950/80 transition-all duration-300">
-                                        <LayoutDashboard className="h-10 w-10 text-slate-800 group-hover:text-violet-500/20 transition-all duration-300" />
+
+                                    <div className="space-y-1">
+                                        <h2 className="text-xl font-black text-white group-hover:text-violet-400 transition-colors leading-tight">
+                                            {dashboard.name}
+                                        </h2>
+                                        <p className="text-slate-500 text-sm font-medium line-clamp-2 leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity">
+                                            {dashboard.description || "Synthesizing ecosystem telemetry and insights."}
+                                        </p>
                                     </div>
-                                </CardContent>
-                                <CardFooter className="px-6 py-4 flex justify-between items-center bg-slate-900/80 border-t border-slate-800/50">
-                                    <div className="flex items-center gap-2 text-xs text-slate-500">
-                                        <Clock className="h-3 w-3" />
-                                        {formatDistanceToNow(new Date(dashboard.updated_at))} ago
+                                </div>
+
+                                <div className="flex-1 px-8 pt-2">
+                                    <div className="h-24 relative overflow-hidden rounded-2xl bg-slate-950/20 border border-slate-800/30">
+                                        <div className="absolute inset-0 bg-gradient-to-br from-violet-600/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                                        <div className="h-full flex items-center justify-center opacity-30 group-hover:opacity-60 transition-opacity">
+                                            <BarChart3 className="h-12 w-12 text-slate-800" />
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-3">
+                                </div>
+
+                                <div className="p-6 mt-4 flex items-center justify-between border-t border-slate-800/50 bg-slate-900/40">
+                                    <div className="flex items-center gap-2">
+                                        <Clock className="h-3 w-3 text-slate-600" />
+                                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                                            {formatDistanceToNow(new Date(dashboard.updated_at))} ago
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-8 w-8 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10"
+                                            className="h-8 w-8 rounded-full text-slate-600 hover:text-rose-400 hover:bg-rose-500/10 transition-all"
                                             onClick={(e) => handleDeleteDashboard(dashboard.id, e)}
                                         >
                                             <Trash2 className="h-4 w-4" />
                                         </Button>
-                                        <ExternalLink className="h-4 w-4 text-slate-600 group-hover:text-violet-400 transition-colors" />
+                                        <div className="h-8 w-8 rounded-full bg-slate-950 flex items-center justify-center text-slate-600 group-hover:text-white transition-all border border-transparent group-hover:border-violet-500/30">
+                                            <ExternalLink className="h-3.5 w-3.5" />
+                                        </div>
                                     </div>
-                                </CardFooter>
-                            </Card>
+                                </div>
+                            </div>
                         </Link>
                     ))}
                 </div>
             )}
 
-            {/* Simple Create Dialog */}
+            {/* Create Dialog Modal */}
             {isCreateDialogOpen && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <Card className="w-full max-w-md bg-slate-900 border-slate-800 shadow-2xl animate-in zoom-in-95 duration-200">
-                        <CardHeader>
-                            <CardTitle className="text-xl text-white flex items-center gap-2">
-                                <Plus className="h-5 w-5 text-violet-500" />
-                                Create New Dashboard
-                            </CardTitle>
-                            <CardDescription>
-                                Give your dashboard a name and description to get started.
-                            </CardDescription>
+                <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xl z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
+                    <div className="absolute inset-0 bg-gradient-to-br from-violet-600/5 via-transparent to-indigo-600/5" onClick={() => setIsCreateDialogOpen(false)} />
+
+                    <Card className="relative w-full max-w-lg bg-slate-900 border border-slate-800 shadow-[0_0_100px_rgba(0,0,0,0.5)] animate-in zoom-in-95 duration-500 rounded-[2.5rem] overflow-hidden border-t border-white/5">
+                        <CardHeader className="p-10 pb-6 text-center space-y-4">
+                            <div className="mx-auto h-16 w-16 rounded-[1.5rem] bg-violet-600/10 border border-violet-500/20 flex items-center justify-center shadow-inner">
+                                <Plus className="h-8 w-8 text-violet-400" />
+                            </div>
+                            <div className="space-y-2">
+                                <CardTitle className="text-3xl font-black text-white tracking-tight">Initiate Module</CardTitle>
+                                <CardDescription className="text-slate-500 font-medium text-base">
+                                    Configure your new command center parameters.
+                                </CardDescription>
+                            </div>
                         </CardHeader>
+
                         <form onSubmit={handleCreateDashboard}>
-                            <CardContent className="space-y-4">
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-slate-300">Name</label>
+                            <CardContent className="px-10 space-y-6 pb-2">
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] pl-1">Module Name</label>
                                     <Input
                                         autoFocus
-                                        placeholder="E.g. Sales Metrics"
-                                        className="bg-slate-950 border-slate-800 text-white focus:ring-violet-500/50"
+                                        placeholder="E.g. Nexus Revenue Matrix"
+                                        className="h-14 bg-slate-950 border-slate-800 text-white rounded-2xl focus:ring-violet-500/20 shadow-inner px-6 text-lg placeholder:text-slate-700"
                                         value={newDashboardName}
                                         onChange={(e) => setNewDashboardName(e.target.value)}
                                         required
                                     />
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-slate-300">Description (Optional)</label>
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] pl-1">Operational Brief (Optional)</label>
                                     <Input
-                                        placeholder="E.g. Internal tracking for Q1 sales..."
-                                        className="bg-slate-950 border-slate-800 text-white focus:ring-violet-500/50"
+                                        placeholder="E.g. Real-time visualization of core revenue vectors..."
+                                        className="h-14 bg-slate-950 border-slate-800 text-white rounded-2xl focus:ring-violet-500/20 shadow-inner px-6 text-base placeholder:text-slate-700"
                                         value={newDashboardDesc}
                                         onChange={(e) => setNewDashboardDesc(e.target.value)}
                                     />
                                 </div>
                             </CardContent>
-                            <CardFooter className="flex justify-end gap-3 pt-2">
+
+                            <CardFooter className="p-10 pt-4 flex gap-4">
                                 <Button
                                     type="button"
                                     variant="ghost"
                                     onClick={() => setIsCreateDialogOpen(false)}
-                                    className="text-slate-400 hover:text-white"
+                                    className="flex-1 h-14 rounded-2xl text-slate-400 hover:text-white hover:bg-white/5 font-bold uppercase tracking-widest text-[10px]"
                                 >
-                                    Cancel
+                                    Abort
                                 </Button>
                                 <Button
                                     type="submit"
-                                    className="bg-violet-600 hover:bg-violet-700"
+                                    className="flex-[2] h-14 bg-violet-600 hover:bg-violet-500 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-violet-600/20 transition-all group"
                                     disabled={!newDashboardName.trim()}
                                 >
-                                    Create Dashboard
+                                    Provision Hub
                                 </Button>
                             </CardFooter>
                         </form>

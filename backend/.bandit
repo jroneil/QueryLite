@@ -1,0 +1,3 @@
+[bandit]
+# Skip B101 (assert_used) - asserts are expected in test files and pytest uses them
+skips = B101

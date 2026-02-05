@@ -1,9 +1,11 @@
-import time
-from fastapi import Request
-from app.exceptions import RateLimitExceededError
-from app.config import get_settings
-from collections import defaultdict
 import threading
+import time
+from collections import defaultdict
+
+from app.config import get_settings
+from app.exceptions import RateLimitExceededError
+from fastapi import Request
+
 
 class RateLimiter:
     """Simple in-memory sliding window rate limiter"""

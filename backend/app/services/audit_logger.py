@@ -3,10 +3,12 @@ Audit Logging Service - Tracking security-relevant events
 """
 
 import json
-from datetime import datetime
-from sqlalchemy.orm import Session
-from app.db.models import AuditLog
 from typing import Optional
+
+from sqlalchemy.orm import Session
+
+from app.db.models import AuditLog
+
 
 class AuditLogger:
     @staticmethod

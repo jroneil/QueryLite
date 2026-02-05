@@ -2,14 +2,20 @@
 Dashboards Router - Management of query dashboards and panels
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 from typing import List, Optional
 from uuid import UUID
 
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
 from app.db.database import get_db
 from app.db.models import Dashboard, DashboardPanel, SavedQuery, User
-from app.models.schemas import DashboardCreate, DashboardResponse, DashboardPanelCreate, DashboardPanelResponse
+from app.models.schemas import (
+    DashboardCreate,
+    DashboardPanelCreate,
+    DashboardPanelResponse,
+    DashboardResponse,
+)
 from app.routers.auth_deps import get_current_user
 
 router = APIRouter(prefix="/dashboards", tags=["Dashboards"])

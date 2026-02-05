@@ -14,9 +14,10 @@ interface AutoChartProps {
     data: Record<string, unknown>[];
     recommendation: ChartRecommendation;
     compact?: boolean;
+    onDataPointClick?: (column: string, value: any) => void;
 }
 
-export function AutoChart({ data, recommendation, compact = false }: AutoChartProps) {
+export function AutoChart({ data, recommendation, compact = false, onDataPointClick }: AutoChartProps) {
     if (!data || data.length === 0) {
         return (
             <div className="flex items-center justify-center h-full text-slate-400">
@@ -51,6 +52,7 @@ export function AutoChart({ data, recommendation, compact = false }: AutoChartPr
                     categories={[y_column]}
                     colors={["violet"]}
                     yAxisWidth={compact ? 0 : 60}
+                    onValueChange={(v) => onDataPointClick && onDataPointClick(x_column, v?.name)}
                 />
             );
 
@@ -66,6 +68,7 @@ export function AutoChart({ data, recommendation, compact = false }: AutoChartPr
                     categories={[y_column]}
                     colors={["emerald"]}
                     yAxisWidth={compact ? 0 : 60}
+                    onValueChange={(v) => onDataPointClick && onDataPointClick(x_column, v?.name)}
                 />
             );
 
@@ -81,6 +84,7 @@ export function AutoChart({ data, recommendation, compact = false }: AutoChartPr
                     categories={[y_column]}
                     colors={["violet"]}
                     yAxisWidth={compact ? 0 : 60}
+                    onValueChange={(v) => onDataPointClick && onDataPointClick(x_column, v?.name)}
                 />
             );
 
@@ -97,6 +101,7 @@ export function AutoChart({ data, recommendation, compact = false }: AutoChartPr
                     colors={["violet", "indigo", "blue", "cyan", "teal"]}
                     variant="pie"
                     showLabel={!compact}
+                    onValueChange={(v) => onDataPointClick && onDataPointClick(category_column, v?.name)}
                 />
             );
 

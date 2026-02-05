@@ -2,10 +2,13 @@
 RBAC Service - Role-Based Access Control logic
 """
 
-from sqlalchemy.orm import Session
-from app.db.models import WorkspaceMember, Workspace
-from fastapi import HTTPException, status
 from uuid import UUID
+
+from fastapi import HTTPException, status
+from sqlalchemy.orm import Session
+
+from app.db.models import Workspace, WorkspaceMember
+
 
 class RBACService:
     @staticmethod

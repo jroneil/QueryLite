@@ -4,10 +4,11 @@ Auth Router - Signup and user management
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+
 from app.db.database import get_db
 from app.db.models import User
-from app.models.schemas import UserCreate, UserResponse, Token
-from app.services.auth_service import get_password_hash, create_access_token
+from app.models.schemas import Token, UserCreate, UserResponse
+from app.services.auth_service import create_access_token, get_password_hash
 
 router = APIRouter()
 
@@ -67,7 +68,7 @@ async def login_credentials(user_data: UserCreate, db: Session = Depends(get_db)
     
     print(f"Login successful for: {user_data.email}")
     access_token = create_access_token(data={"sub": user.email})
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {"access_token": access_token, "token_type": "bearer"}  # nosec B105 - standard OAuth2 token type, not a password
 
 @router.post("/sync-google", response_model=UserResponse)
 async def sync_google_user(user_data: dict, db: Session = Depends(get_db)):

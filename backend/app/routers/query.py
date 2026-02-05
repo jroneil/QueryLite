@@ -2,26 +2,34 @@
 Query router - Natural language to SQL endpoint
 """
 
+import logging
+import traceback
+from typing import List
 from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.config import get_settings
 
+from app.config import get_settings
 from app.db.database import get_db
-from app.db.models import DataSource, QueryHistory
-from app.models.schemas import QueryRequest, QueryResponse
+from app.db.models import Comment, ConversationThread, DataSource, QueryHistory, SavedQuery, ThreadMessage, User
+from app.models.schemas import (
+    ChartRecommendation,
+    CommentCreate,
+    CommentResponse,
+    QueryHistoryResponse,
+    QueryRequest,
+    QueryResponse,
+    SavedQueryCreate,
+    SavedQueryResponse,
+)
+from app.routers.auth_deps import get_current_user
 from app.services.encryption import decrypt_connection_string
 from app.services.llm_service import get_llm_service
 from app.services.query_executor import QueryExecutor
 from app.services.webhook_service import WebhookService
 
 router = APIRouter()
-
-
-from app.routers.auth_deps import get_current_user
-from app.db.models import User, SavedQuery
-from app.models.schemas import QueryRequest, QueryResponse, QueryHistoryResponse, SavedQueryCreate, SavedQueryResponse
-from typing import List
 
 
 @router.post("/query", response_model=QueryResponse)
@@ -33,9 +41,8 @@ async def execute_natural_language_query(
     """
     Execute a natural language query against a connected data source.
     """
-    from app.services.audit_logger import AuditLogger
     from app.middleware.read_only_enforcer import is_safe_sql
-    from app.config import get_settings
+    from app.services.audit_logger import AuditLogger
 
     # Get data source and verify ownership
     data_source = db.query(DataSource).filter(
@@ -64,11 +71,37 @@ async def execute_natural_language_query(
         if not table_names:
             raise HTTPException(status_code=400, detail="No tables found in the database")
         
+        # Incorporate global filters into the natural language question for the LLM
+        refined_question = request.question
+        if request.filters:
+            filter_strs = []
+            for col, val in request.filters.items():
+                if val:
+                    filter_strs.append(f"{col} is {val}")
+            if filter_strs:
+                refined_question += " where " + " and ".join(filter_strs)
+
+        # Phase 6.1: Conversational Memory
+        conversation_history = []
+        thread = None
+        if request.thread_id:
+            thread = db.query(ConversationThread).filter(
+                ConversationThread.id == request.thread_id,
+                ConversationThread.user_id == current_user.id
+            ).first()
+            if thread:
+                # Build history for LLM - limit to last 10 messages for context window
+                for msg in thread.messages[-10:]:
+                    conversation_history.append({
+                        "role": msg.role,
+                        "content": msg.content
+                    })
+
         llm_service = get_llm_service()
         if not llm_service.is_configured():
             raise HTTPException(status_code=503, detail="LLM service not configured")
         
-        sql_result = llm_service.generate_sql(request.question, schema_info, table_names)
+        sql_result = llm_service.generate_sql(refined_question, schema_info, table_names, conversation_history)
         if not sql_result.sql_query:
             raise HTTPException(status_code=400, detail=f"LLM Error: {sql_result.explanation}")
 
@@ -108,6 +141,25 @@ async def execute_natural_language_query(
             workspace_id=str(data_source.workspace_id) if data_source.workspace_id else None
         )
 
+        # Phase 5: Query Result Caching
+        import hashlib
+
+        from app.services.cache_service import cache_service
+        
+        cache_key = hashlib.md5(f"{data_source.id}:{sql_result.sql_query}".encode(), usedforsecurity=False).hexdigest()  # nosec B324
+        cached_response = cache_service.get(cache_key)
+        
+        if cached_response:
+            # We still want to log that a cached query happened
+            AuditLogger.log_event(
+                db=db,
+                user_id=str(current_user.id),
+                action="query_cache_hit",
+                details={"question": request.question, "sql": sql_result.sql_query}
+            )
+            # Reconstruct QueryResponse from cache
+            return QueryResponse(**cached_response)
+
         results, execution_time = executor.execute_query(sql_result.sql_query)
         chart_recommendation = executor.recommend_chart_type(results)
         
@@ -120,6 +172,31 @@ async def execute_natural_language_query(
             chart_type=chart_recommendation.chart_type
         )
         db.add(history)
+        
+        # Save to conversation thread if applicable
+        if thread:
+            # Add user message
+            user_msg = ThreadMessage(
+                thread_id=thread.id,
+                role="user",
+                content=request.question
+            )
+            db.add(user_msg)
+            
+            # Add assistant message
+            assistant_msg = ThreadMessage(
+                thread_id=thread.id,
+                role="assistant",
+                content=sql_result.explanation,
+                sql_query=sql_result.sql_query,
+                chart_recommendation=chart_recommendation.dict()
+            )
+            db.add(assistant_msg)
+            
+            # Update thread timing
+            from sqlalchemy.sql import func
+            thread.updated_at = func.now()
+
         db.commit()
         executor.close()
         
@@ -136,7 +213,10 @@ async def execute_natural_language_query(
             }
         )
 
-        return QueryResponse(
+        print(f"Query executed successfully. Rows: {len(results)}, Execution time: {execution_time}ms")
+        print(f"Chart recommendation: {chart_recommendation.chart_type} (x: {chart_recommendation.x_column}, y: {chart_recommendation.y_column})")
+
+        response_data = QueryResponse(
             sql_query=sql_result.sql_query,
             explanation=sql_result.explanation,
             results=results,
@@ -145,8 +225,17 @@ async def execute_natural_language_query(
             execution_time_ms=execution_time,
             confidence=sql_result.confidence
         )
-    except HTTPException: raise
-    except Exception as e: raise HTTPException(status_code=500, detail=str(e))
+        
+        # Store in cache
+        cache_service.set(cache_key, response_data.dict())
+
+        return response_data
+    except HTTPException: 
+        raise
+    except Exception as e: 
+        logging.error(f"Error in execute_natural_language_query: {str(e)}")
+        logging.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 
 @router.get("/history", response_model=List[QueryHistoryResponse])
@@ -258,8 +347,6 @@ async def check_llm_status():
 
 
 # --- Comments Endpoints ---
-from app.db.models import Comment
-from app.models.schemas import CommentCreate, CommentResponse
 
 @router.get("/saved-queries/{query_id}/comments", response_model=List[CommentResponse])
 async def list_comments(
@@ -329,4 +416,3 @@ async def delete_comment(
     db.delete(comment)
     db.commit()
     return {"message": "Comment deleted"}
-

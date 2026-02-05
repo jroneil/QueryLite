@@ -2,9 +2,10 @@
 Read-Only Enforcer Middleware - Strictly prevents non-SELECT queries
 """
 
-from fastapi import Request, HTTPException
 import sqlparse
 from app.config import get_settings
+from fastapi import Request
+
 
 async def read_only_enforcer_middleware(request: Request, call_next):
     # Only check POST requests directed at query endpoints

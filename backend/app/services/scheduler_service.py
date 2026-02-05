@@ -1,14 +1,14 @@
+import logging
+from datetime import datetime
+
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from sqlalchemy.orm import Session
+
 from app.db.database import SessionLocal
-from app.db.models import ScheduledReport, SavedQuery, DataSource
-from app.services.query_executor import QueryExecutor
+from app.db.models import DataSource, SavedQuery, ScheduledReport
 from app.services.encryption import decrypt_connection_string
 from app.services.notifications.email_service import SMTPEmailProvider
-from datetime import datetime
-import asyncio
-import logging
+from app.services.query_executor import QueryExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ class ReportScheduler:
         
         db = SessionLocal()
         try:
-            active_reports = db.query(ScheduledReport).filter(ScheduledReport.is_active == True).all()
+            active_reports = db.query(ScheduledReport).filter(ScheduledReport.is_active).all()
             for report in active_reports:
                 self.add_report_job(report)
             logger.info(f"Loaded {len(active_reports)} active schedules.")

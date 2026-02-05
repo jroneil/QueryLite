@@ -7,7 +7,9 @@ import {
     Maximize2,
     MoreHorizontal,
     RefreshCw,
-    Trash2
+    Trash2,
+    Sparkles,
+    Info
 } from "lucide-react";
 import {
     Card,
@@ -19,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { authenticatedFetch } from "@/lib/api";
 import { AutoChart } from "@/app/components/charts/auto-chart";
 import { toast } from "sonner";
+import { DrillDownModal } from "./DrillDownModal";
 
 interface PanelCardProps {
     panelId: string;
@@ -26,14 +29,24 @@ interface PanelCardProps {
     gridH?: number;
     title?: string;
     onRemove?: (id: string) => void;
+    activeFilters?: Record<string, any>;
 }
 
-export function PanelCard({ panelId, savedQueryId, gridH = 3, title, onRemove }: PanelCardProps) {
+export function PanelCard({ panelId, savedQueryId, gridH = 3, title, onRemove, activeFilters }: PanelCardProps) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [data, setData] = useState<any>(null);
     const [recommendation, setRecommendation] = useState<any>(null);
     const [queryName, setQueryName] = useState<string>("");
+    const [naturalQuery, setNaturalQuery] = useState<string>("");
+    const [dataSourceId, setDataSourceId] = useState<string>("");
+    const [explanation, setExplanation] = useState<string>("");
+
+    // Phase 5 States
+    const [narrative, setNarrative] = useState<string | null>(null);
+    const [loadingNarrative, setLoadingNarrative] = useState(false);
+    const [isDrillDownOpen, setIsDrillDownOpen] = useState(false);
+    const [drillDownContext, setDrillDownContext] = useState<{ column: string, value: any } | undefined>();
 
     // Calculate height based on grid_h units (1 unit ≈ 80px)
     const contentHeight = Math.max(160, gridH * 80);
@@ -41,12 +54,15 @@ export function PanelCard({ panelId, savedQueryId, gridH = 3, title, onRemove }:
     const fetchPanelData = async () => {
         setLoading(true);
         setError(null);
+        setNarrative(null);
         try {
-            // 1. Get the saved query details to get the question and DS
+            // 1. Get the saved query details
             const queryRes = await authenticatedFetch(`/api/saved-queries/${savedQueryId}`);
             if (!queryRes.ok) throw new Error("Failed to load query details");
             const queryData = await queryRes.json();
             setQueryName(queryData.name);
+            setNaturalQuery(queryData.natural_language_query);
+            setDataSourceId(queryData.data_source_id);
 
             // 2. Execute the query
             const runRes = await authenticatedFetch("/api/query", {
@@ -54,6 +70,7 @@ export function PanelCard({ panelId, savedQueryId, gridH = 3, title, onRemove }:
                 body: JSON.stringify({
                     question: queryData.natural_language_query,
                     data_source_id: queryData.data_source_id,
+                    filters: activeFilters // Pass active filters to the backend
                 }),
             });
 
@@ -61,77 +78,158 @@ export function PanelCard({ panelId, savedQueryId, gridH = 3, title, onRemove }:
                 const result = await runRes.json();
                 setData(result.results);
                 setRecommendation(result.chart_recommendation);
+                setExplanation(result.explanation);
             } else {
                 const errData = await runRes.json();
                 setError(errData.detail || "Failed to execute query");
             }
         } catch (err: any) {
-            console.error("Panel error:", err);
             setError(err.message || "An unexpected error occurred");
         } finally {
             setLoading(false);
         }
     };
 
+    const generateNarrative = async () => {
+        if (!data || !recommendation) return;
+        setLoadingNarrative(true);
+        try {
+            const res = await authenticatedFetch("/api/insights/chart-narrative", {
+                method: "POST",
+                body: JSON.stringify({
+                    data,
+                    chart_type: recommendation.chart_type,
+                    question: naturalQuery,
+                    explanation
+                })
+            });
+            if (res.ok) {
+                const result = await res.json();
+                setNarrative(result.narrative);
+            } else {
+                toast.error("Could not generate summary");
+            }
+        } catch (err) {
+            toast.error("Insight engine unavailable");
+        } finally {
+            setLoadingNarrative(false);
+        }
+    };
+
+    const handleDataClick = (column: string, value: any) => {
+        setDrillDownContext({ column, value });
+        setIsDrillDownOpen(true);
+    };
+
     useEffect(() => {
         fetchPanelData();
-    }, [savedQueryId]);
+    }, [savedQueryId, activeFilters]);
 
     return (
-        <Card className="h-full w-full bg-slate-900/40 border-slate-800 flex flex-col overflow-hidden group hover:border-slate-700 transition-colors shadow-xl">
-            <CardHeader className="p-3 pb-1 flex flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-xs font-semibold text-slate-300 truncate pr-8">
-                    {title || queryName || "Untitled Panel"}
-                </CardTitle>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 text-slate-500 hover:text-white"
-                        onClick={fetchPanelData}
-                        disabled={loading}
-                    >
-                        <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
-                    </Button>
-                    {onRemove && (
+        <>
+            <Card
+                className="h-full w-full bg-slate-900/40 backdrop-blur-md border border-slate-800/50 flex flex-col overflow-hidden group hover:border-violet-500/30 transition-all duration-300 shadow-2xl rounded-2xl"
+                style={{ minHeight: `${contentHeight + 80}px` }}
+            >
+                <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between space-y-0 bg-gradient-to-b from-slate-900/50 to-transparent">
+                    <div className="flex flex-col gap-0.5 max-w-[70%]">
+                        <CardTitle className="text-sm font-bold text-slate-100 truncate tracking-tight">
+                            {title || queryName || "Untitled Panel"}
+                        </CardTitle>
+                        <p className="text-[10px] text-slate-500 truncate font-medium">
+                            {naturalQuery}
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10"
-                            onClick={() => onRemove(panelId)}
+                            className="h-7 w-7 rounded-full text-slate-400 hover:text-amber-400 hover:bg-amber-400/10"
+                            onClick={generateNarrative}
+                            disabled={loading || loadingNarrative || !data}
+                            title="Auto-Narrative"
                         >
-                            <Trash2 className="h-3 w-3" />
+                            <Sparkles className={`h-3.5 w-3.5 ${loadingNarrative ? "animate-pulse" : ""}`} />
                         </Button>
-                    )}
-                </div>
-            </CardHeader>
-            <CardContent className="flex-1 p-3 pt-1 min-h-0 relative">
-                {loading ? (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <Loader2 className="h-5 w-5 animate-spin text-violet-500" />
-                    </div>
-                ) : error ? (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
-                        <AlertCircle className="h-6 w-6 text-rose-500 mb-2 opacity-50" />
-                        <p className="text-[10px] text-slate-400 line-clamp-3">{error}</p>
                         <Button
-                            variant="link"
-                            className="text-violet-400 text-[10px] h-auto p-0 mt-1"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 rounded-full text-slate-400 hover:text-white hover:bg-white/10"
                             onClick={fetchPanelData}
+                            disabled={loading}
                         >
-                            Try again
+                            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
                         </Button>
+                        {onRemove && (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 rounded-full text-slate-400 hover:text-rose-400 hover:bg-rose-500/10"
+                                onClick={() => onRemove(panelId)}
+                            >
+                                <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                        )}
                     </div>
-                ) : data && recommendation ? (
-                    <div className="w-full" style={{ height: `${contentHeight}px` }}>
-                        <AutoChart data={data} recommendation={recommendation} compact={true} />
-                    </div>
-                ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-slate-500 text-[10px]">
-                        No data available
-                    </div>
-                )}
-            </CardContent>
-        </Card>
+                </CardHeader>
+                <CardContent className="flex-1 p-4 pt-2 min-h-0 relative flex flex-col">
+                    {loading ? (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="relative flex items-center justify-center">
+                                <div className="absolute h-12 w-12 rounded-full border-t-2 border-violet-500 animate-spin" />
+                                <div className="h-10 w-10 rounded-full border-t-2 border-indigo-500 animate-spin-reverse opacity-50" />
+                            </div>
+                        </div>
+                    ) : error ? (
+                        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                            <div className="bg-rose-500/10 p-2.5 rounded-full mb-3">
+                                <AlertCircle className="h-5 w-5 text-rose-500" />
+                            </div>
+                            <p className="text-xs text-slate-400 mb-4 px-4 line-clamp-3 leading-relaxed">{error}</p>
+                            <Button
+                                variant="outline"
+                                className="border-slate-800 text-slate-300 hover:text-white text-[10px] h-8 px-4"
+                                onClick={fetchPanelData}
+                            >
+                                Reconnect data
+                            </Button>
+                        </div>
+                    ) : data && recommendation ? (
+                        <div className="animate-in fade-in zoom-in-95 duration-500">
+                            {narrative && (
+                                <div className="mb-4 p-3 bg-violet-500/5 border border-violet-500/20 rounded-xl text-[11px] text-violet-200/90 leading-relaxed shadow-inner flex gap-3 animate-in slide-in-from-top-2 duration-300">
+                                    <Sparkles className="h-3.5 w-3.5 text-violet-400 flex-shrink-0 mt-0.5" />
+                                    <p>{narrative}</p>
+                                </div>
+                            )}
+                            <div
+                                className="w-full bg-slate-950/20 rounded-xl border border-slate-800/30 p-2"
+                                style={{ height: `${contentHeight}px` }}
+                            >
+                                <AutoChart
+                                    data={data}
+                                    recommendation={recommendation}
+                                    compact={false}
+                                    onDataPointClick={handleDataClick}
+                                />
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex-1 flex items-center justify-center text-slate-600 text-[11px] font-medium italic">
+                            No visualization available
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            <DrillDownModal
+                isOpen={isDrillDownOpen}
+                onClose={() => setIsDrillDownOpen(false)}
+                title={title || queryName}
+                question={naturalQuery}
+                dataSourceId={dataSourceId}
+                filterContext={drillDownContext}
+            />
+        </>
     );
 }

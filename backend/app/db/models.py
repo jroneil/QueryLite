@@ -52,8 +52,10 @@ class Workspace(Base):
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     owner_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    webhook_url = Column(String(512), nullable=True)
+    webhook_url = Column(String(512), nullable=True) # General webhook
     webhook_enabled = Column(Boolean, default=False)
+    slack_webhook_url = Column(String(512), nullable=True)
+    teams_webhook_url = Column(String(512), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     members = relationship("WorkspaceMember", back_populates="workspace", cascade="all, delete-orphan")
@@ -150,6 +152,7 @@ class AuditLog(Base):
     ip_address = Column(String(50), nullable=True)
     token_count = Column(Integer, nullable=True)
     response_time_ms = Column(Integer, nullable=True)
+    feedback_score = Column(Integer, nullable=True) # -1 (poor), 0 (neutral), 1 (good)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     user = relationship("User", back_populates="audit_logs")
@@ -165,6 +168,8 @@ class ScheduledReport(Base):
     name = Column(String(255), nullable=False)
     schedule_cron = Column(String(100), nullable=False) # Cron expression
     recipient_emails = Column(JSON, nullable=False) # List of strings
+    channel_type = Column(String(50), default="email") # email, slack, teams
+    channel_webhook = Column(String(512), nullable=True) # Override workspace webhook if set
     is_active = Column(Boolean, default=True)
     last_run_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

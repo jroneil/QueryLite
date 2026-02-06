@@ -30,9 +30,10 @@ interface PanelCardProps {
     title?: string;
     onRemove?: (id: string) => void;
     activeFilters?: Record<string, any>;
+    onChartInteraction?: (filter: { column: string, value: any }) => void;
 }
 
-export function PanelCard({ panelId, savedQueryId, gridH = 3, title, onRemove, activeFilters }: PanelCardProps) {
+export function PanelCard({ panelId, savedQueryId, gridH = 3, title, onRemove, activeFilters, onChartInteraction }: PanelCardProps) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [data, setData] = useState<any>(null);
@@ -119,6 +120,9 @@ export function PanelCard({ panelId, savedQueryId, gridH = 3, title, onRemove, a
     const handleDataClick = (column: string, value: any) => {
         setDrillDownContext({ column, value });
         setIsDrillDownOpen(true);
+        if (onChartInteraction) {
+            onChartInteraction({ column, value });
+        }
     };
 
     useEffect(() => {
@@ -128,6 +132,7 @@ export function PanelCard({ panelId, savedQueryId, gridH = 3, title, onRemove, a
     return (
         <>
             <Card
+                id={`panel-content-${panelId}`}
                 className="h-full w-full bg-slate-900/40 backdrop-blur-md border border-slate-800/50 flex flex-col overflow-hidden group hover:border-violet-500/30 transition-all duration-300 shadow-2xl rounded-2xl"
                 style={{ minHeight: `${contentHeight + 80}px` }}
             >

@@ -71,6 +71,8 @@ function SavedQueriesContent() {
     const [scheduleName, setScheduleName] = useState("");
     const [scheduleCron, setScheduleCron] = useState("0 9 * * *");
     const [recipients, setRecipients] = useState("");
+    const [channelType, setChannelType] = useState<string>("email");
+    const [channelWebhook, setChannelWebhook] = useState("");
     const [isScheduling, setIsScheduling] = useState(false);
 
     // Comments states
@@ -270,6 +272,8 @@ function SavedQueriesContent() {
                     saved_query_id: selectedQuery.id,
                     schedule_cron: scheduleCron,
                     recipient_emails: emailList,
+                    channel_type: channelType,
+                    channel_webhook: channelWebhook,
                     is_active: true
                 }),
             });
@@ -483,15 +487,41 @@ function SavedQueriesContent() {
                             </Select>
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="emails">Recipient Emails (comma separated)</Label>
-                            <Input
-                                id="emails"
-                                placeholder="team@example.com, boss@example.com"
-                                value={recipients}
-                                onChange={(e) => setRecipients(e.target.value)}
-                                className="bg-slate-950 border-slate-800"
-                            />
+                            <Label htmlFor="channel">Delivery Channel</Label>
+                            <Select value={channelType} onValueChange={setChannelType}>
+                                <SelectTrigger className="bg-slate-950 border-slate-800">
+                                    <SelectValue placeholder="Select channel" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-slate-900 border-slate-800 text-white">
+                                    <SelectItem value="email">Email Notification</SelectItem>
+                                    <SelectItem value="slack">Slack Webhook</SelectItem>
+                                    <SelectItem value="teams">MS Teams Webhook</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
+                        {channelType === "email" ? (
+                            <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
+                                <Label htmlFor="emails">Recipient Emails (comma separated)</Label>
+                                <Input
+                                    id="emails"
+                                    placeholder="team@example.com, boss@example.com"
+                                    value={recipients}
+                                    onChange={(e) => setRecipients(e.target.value)}
+                                    className="bg-slate-950 border-slate-800"
+                                />
+                            </div>
+                        ) : (
+                            <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
+                                <Label htmlFor="webhook">{channelType === "slack" ? "Slack" : "Teams"} Webhook URL</Label>
+                                <Input
+                                    id="webhook"
+                                    placeholder="https://hooks.slack.com/services/..."
+                                    value={channelWebhook}
+                                    onChange={(e) => setChannelWebhook(e.target.value)}
+                                    className="bg-slate-950 border-slate-800"
+                                />
+                            </div>
+                        )}
                     </div>
                     <DialogFooter>
                         <Button variant="ghost" onClick={() => setIsScheduleDialogOpen(false)}>Cancel</Button>

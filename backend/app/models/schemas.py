@@ -474,3 +474,42 @@ class DataAnomalyAlertResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# Forecast Schemas (Phase 7.3)
+class ForecastRequest(BaseModel):
+    """Schema for requesting a time-series forecast"""
+    date_col: str
+    value_col: str
+    periods: int = 7
+    data: Optional[List[dict[str, Any]]] = None # Optional: can provide raw data or use saved_query_id
+    saved_query_id: Optional[UUID] = None
+
+class ForecastProjection(BaseModel):
+    """Schema for a single projected data point"""
+    index: int
+    value: float
+
+class ForecastResponse(BaseModel):
+    """Schema for forecasting results"""
+    method: str
+    projections: List[ForecastProjection]
+    trend: str # up, down, stable
+    slope: Optional[float] = None
+    intercept: Optional[float] = None
+    error: Optional[str] = None
+
+
+# Discovery Schemas (Phase 7.3)
+class DiscoveryInsight(BaseModel):
+    """Schema for a single discovered insight"""
+    type: str # trend, peak, volatility
+    severity: str # low, medium, high
+    message: str
+    metadata: Optional[dict[str, Any]] = None
+
+class DiscoveryResponse(BaseModel):
+    """Schema for a collection of discovered insights"""
+    insights: List[DiscoveryInsight]
+    saved_query_id: UUID
+    generated_at: datetime

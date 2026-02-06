@@ -15,9 +15,10 @@ interface AutoChartProps {
     recommendation: ChartRecommendation;
     compact?: boolean;
     onDataPointClick?: (column: string, value: any) => void;
+    forecastData?: { index: number; value: number }[];
 }
 
-export function AutoChart({ data, recommendation, compact = false, onDataPointClick }: AutoChartProps) {
+export function AutoChart({ data, recommendation, compact = false, onDataPointClick, forecastData }: AutoChartProps) {
     if (!data || data.length === 0) {
         return (
             <div className="flex items-center justify-center h-full text-slate-400">
@@ -29,6 +30,36 @@ export function AutoChart({ data, recommendation, compact = false, onDataPointCl
     const { chart_type, x_column, y_column, category_column, value_column } =
         recommendation;
 
+    // Merge forecast data if present
+    let chartData = data as Record<string, string | number>[];
+    let categories = [y_column || ""];
+    let colors = chart_type === "line" ? ["emerald"] : ["violet"];
+
+    if (forecastData && x_column && y_column) {
+        const lastActual = chartData[chartData.length - 1];
+
+        // Create forecast points
+        const forecastPoints = forecastData.map(f => ({
+            [x_column]: `Next ${f.index - (chartData.length - 1)}`,
+            ["Forecast"]: f.value
+        }));
+
+        // Connect the last actual point to the first forecast point for continuity
+        const extendedData = [
+            ...chartData.map(d => ({ ...d })),
+            ...forecastPoints
+        ];
+
+        // Add the last actual value to the forecast series as well so they connect
+        if (extendedData.length > chartData.length) {
+            extendedData[chartData.length - 1]["Forecast"] = lastActual[y_column] as number;
+        }
+
+        chartData = extendedData as Record<string, string | number>[];
+        categories = [y_column, "Forecast"];
+        colors = chart_type === "line" ? ["emerald", "rose"] : ["violet", "rose"];
+    }
+
     // Common styling for Tremor charts in dark mode
     const commonProps = {
         className: "h-full w-full",
@@ -36,7 +67,7 @@ export function AutoChart({ data, recommendation, compact = false, onDataPointCl
         showXAxis: !compact,
         showYAxis: !compact,
         showGridLines: !compact,
-        showLegend: !compact,
+        showLegend: !compact && !!forecastData,
     };
 
     switch (chart_type) {
@@ -47,7 +78,7 @@ export function AutoChart({ data, recommendation, compact = false, onDataPointCl
             return (
                 <BarChart
                     {...commonProps}
-                    data={data as Record<string, string | number>[]}
+                    data={chartData}
                     index={x_column}
                     categories={[y_column]}
                     colors={["violet"]}
@@ -63,10 +94,10 @@ export function AutoChart({ data, recommendation, compact = false, onDataPointCl
             return (
                 <LineChart
                     {...commonProps}
-                    data={data as Record<string, string | number>[]}
+                    data={chartData}
                     index={x_column}
-                    categories={[y_column]}
-                    colors={["emerald"]}
+                    categories={categories}
+                    colors={colors as any}
                     yAxisWidth={compact ? 0 : 60}
                     onValueChange={(v) => onDataPointClick && onDataPointClick(x_column, v?.name)}
                 />
@@ -79,10 +110,10 @@ export function AutoChart({ data, recommendation, compact = false, onDataPointCl
             return (
                 <AreaChart
                     {...commonProps}
-                    data={data as Record<string, string | number>[]}
+                    data={chartData}
                     index={x_column}
-                    categories={[y_column]}
-                    colors={["violet"]}
+                    categories={categories}
+                    colors={colors as any}
                     yAxisWidth={compact ? 0 : 60}
                     onValueChange={(v) => onDataPointClick && onDataPointClick(x_column, v?.name)}
                 />

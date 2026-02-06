@@ -85,6 +85,7 @@ No SQL knowledge required. Just ask, and see your data come to life.
 ### Phase 7.2: Proactive Intelligence (Completed ✅)
 - **Anomaly Detection**: AI-driven scanning for unexpected spikes or drops ✅
 - **Smart Alerting**: Threshold-based triggers for Slack, Teams, and Email ✅
+- **Trend Forecasting**: Predictive modeling based on historical data ✅
 - **Insight Monitoring**: Centralized dashboard for data health and alerts ✅
 
 ---
@@ -262,6 +263,8 @@ DATABASE_URL=postgresql://querylite:querylite_secret@localhost:5432/querylite
 - **Toast Notifications**: Interactive UI with real-time feedback and keyboard shortcuts (Ctrl+Enter)
 - **Proactive Intelligence**: Automated AI-driven anomaly detection with real-time dashboard indicators
 - **Intelligence Center**: Centralized management for smart threshold-based alerts and data health insights
+- **Predictive Forecasting**: One-click time-series projections and future trend analysis
+- **Smart Discovery**: AI-generated insight feed that automatically surfaces "Need to Know" data facts
 
 ## Environment Variables
 

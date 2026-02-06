@@ -12,6 +12,7 @@ import {
     Search,
     RefreshCw,
     X,
+    Sparkles,
 } from "lucide-react";
 import {
     Card,
@@ -49,11 +50,23 @@ interface Anomaly {
     created_at: string;
 }
 
+interface DiscoveryResponse {
+    insights: {
+        type: string;
+        severity: string;
+        message: string;
+        metadata?: any;
+    }[];
+    saved_query_id: string;
+    generated_at: string;
+}
+
 export default function IntelligencePage() {
     const [rules, setRules] = useState<AlertRule[]>([]);
     const [anomalies, setAnomalies] = useState<Anomaly[]>([]);
+    const [discoveries, setDiscoveries] = useState<DiscoveryResponse[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<"anomalies" | "alerts">("anomalies");
+    const [activeTab, setActiveTab] = useState<"anomalies" | "alerts" | "discovery">("anomalies");
 
     useEffect(() => {
         fetchIntel();
@@ -62,13 +75,15 @@ export default function IntelligencePage() {
     const fetchIntel = async () => {
         setLoading(true);
         try {
-            const [rulesRes, anomaliesRes] = await Promise.all([
+            const [rulesRes, anomaliesRes, discoveryRes] = await Promise.all([
                 authenticatedFetch("/api/alerts/"),
-                authenticatedFetch("/api/alerts/anomalies")
+                authenticatedFetch("/api/alerts/anomalies"),
+                authenticatedFetch("/api/insights/discover-all")
             ]);
 
             if (rulesRes.ok) setRules(await rulesRes.json());
             if (anomaliesRes.ok) setAnomalies(await anomaliesRes.json());
+            if (discoveryRes.ok) setDiscoveries(await discoveryRes.json());
         } catch (error) {
             toast.error("Failed to sync intelligence data");
         } finally {
@@ -135,6 +150,14 @@ export default function IntelligencePage() {
                         >
                             <Bell className="h-3.5 w-3.5 mr-2" />
                             Control Rules
+                        </Button>
+                        <Button
+                            onClick={() => setActiveTab("discovery")}
+                            variant={activeTab === "discovery" ? "default" : "ghost"}
+                            className={`h-11 rounded-xl px-6 text-xs font-bold uppercase tracking-widest transition-all ${activeTab === "discovery" ? 'bg-emerald-600 text-white shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'text-slate-500 hover:text-slate-300'}`}
+                        >
+                            <Sparkles className="h-3.5 w-3.5 mr-2" />
+                            Data Discovery
                         </Button>
                     </div>
                 </div>
@@ -206,6 +229,70 @@ export default function IntelligencePage() {
                                     )}
                                 </CardContent>
                             </Card>
+                        ))
+                    )}
+                </div>
+            ) : activeTab === "discovery" ? (
+                /* Data Discovery Layout */
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-4 duration-500">
+                    {discoveries.length === 0 ? (
+                        <div className="col-span-full py-20 text-center border-2 border-dashed border-slate-800 rounded-3xl group">
+                            <Sparkles className="h-12 w-12 text-slate-700 mx-auto mb-4 group-hover:scale-110 transition-transform" />
+                            <h3 className="text-white font-bold text-lg mb-1">Scanning for Knowledge...</h3>
+                            <p className="text-slate-500 text-sm italic">Our Intelligence Engine is still processing your historical data.</p>
+                        </div>
+                    ) : (
+                        discoveries.map((discovery, dIdx) => (
+                            <div key={dIdx} className="space-y-4">
+                                {discovery.insights.map((insight, iIdx) => (
+                                    <Card key={`${dIdx}-${iIdx}`} className="bg-slate-900/40 border-slate-800/50 backdrop-blur-xl rounded-2xl overflow-hidden hover:border-violet-500/30 transition-all group">
+                                        <CardHeader className="p-6">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${insight.type === 'trend' ? 'bg-blue-500/10 text-blue-400' :
+                                                            insight.type === 'peak' ? 'bg-amber-500/10 text-amber-400' :
+                                                                'bg-violet-500/10 text-violet-400'
+                                                        }`}>
+                                                        <Sparkles className="h-5 w-5" />
+                                                    </div>
+                                                    <div>
+                                                        <Badge variant="outline" className="text-[8px] uppercase font-black tracking-widest border-white/5 bg-slate-950/50">
+                                                            Smart Finding
+                                                        </Badge>
+                                                        <CardTitle className="text-white text-sm mt-0.5">Automated Intelligence</CardTitle>
+                                                    </div>
+                                                </div>
+                                                <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                                                    {formatDistanceToNow(new Date(discovery.generated_at), { addSuffix: true })}
+                                                </div>
+                                            </div>
+                                        </CardHeader>
+                                        <CardContent className="px-6 pb-6 pt-0">
+                                            <p className="text-slate-300 font-medium text-lg leading-snug">
+                                                "{insight.message}"
+                                            </p>
+                                            <div className="mt-6 flex items-center justify-between border-t border-white/5 pt-4">
+                                                <div className="flex items-center gap-2">
+                                                    <div className={`h-2 w-2 rounded-full ${insight.severity === 'high' ? 'bg-rose-500 animate-pulse' :
+                                                            insight.severity === 'medium' ? 'bg-amber-500' : 'bg-emerald-500'
+                                                        }`} />
+                                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                                        {insight.severity} Priority Observation
+                                                    </span>
+                                                </div>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-8 rounded-lg text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-white hover:bg-white/5"
+                                                    onClick={() => window.location.href = `/ask?saved=${discovery.saved_query_id}`}
+                                                >
+                                                    View Source
+                                                </Button>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
                         ))
                     )}
                 </div>

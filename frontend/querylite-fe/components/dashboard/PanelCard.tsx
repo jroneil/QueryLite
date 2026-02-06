@@ -11,7 +11,8 @@ import {
     Sparkles,
     Info,
     Zap,
-    Clock
+    Clock,
+    TrendingUp
 } from "lucide-react";
 import {
     Card,
@@ -59,6 +60,38 @@ export function PanelCard({ panelId, savedQueryId, gridH = 3, title, onRemove, a
     // Phase 7.2 Anomalies
     const [anomalies, setAnomalies] = useState<any[]>([]);
 
+    // Phase 7.3 Forecasting
+    const [forecastData, setForecastData] = useState<{ index: number; value: number }[] | null>(null);
+    const [isForecasting, setIsForecasting] = useState(false);
+
+    const handleForecast = async () => {
+        if (!data || !recommendation?.x_column || !recommendation?.y_column) return;
+
+        setIsForecasting(true);
+        try {
+            const res = await authenticatedFetch("/api/forecasts/forecast", {
+                method: "POST",
+                body: JSON.stringify({
+                    date_col: recommendation.x_column,
+                    value_col: recommendation.y_column,
+                    periods: 7,
+                    data: data
+                })
+            });
+            if (res.ok) {
+                const result = await res.json();
+                if (result.projections) {
+                    setForecastData(result.projections);
+                    toast.success("Projection compiled");
+                }
+            }
+        } catch (err) {
+            console.error("Forecast failed", err);
+        } finally {
+            setIsForecasting(false);
+        }
+    };
+
     const fetchAnomalies = async () => {
         try {
             const res = await authenticatedFetch("/api/alerts/anomalies");
@@ -76,6 +109,7 @@ export function PanelCard({ panelId, savedQueryId, gridH = 3, title, onRemove, a
         setLoading(true);
         setError(null);
         setNarrative(null);
+        setForecastData(null);
         try {
             // 1. Get the saved query details
             const queryRes = await authenticatedFetch(`/api/saved-queries/${savedQueryId}`);
@@ -199,6 +233,18 @@ export function PanelCard({ panelId, savedQueryId, gridH = 3, title, onRemove, a
                         >
                             <Sparkles className={`h-3.5 w-3.5 ${loadingNarrative ? "animate-pulse" : ""}`} />
                         </Button>
+                        {(recommendation?.chart_type === 'line' || recommendation?.chart_type === 'area') && (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className={`h-7 w-7 rounded-full transition-all ${forecastData ? 'text-indigo-400 bg-indigo-500/10' : 'text-slate-400 hover:text-indigo-400 hover:bg-indigo-400/10'}`}
+                                onClick={forecastData ? () => setForecastData(null) : handleForecast}
+                                disabled={loading || isForecasting || !data}
+                                title={forecastData ? "Disable Forecast" : "Explore Future"}
+                            >
+                                <TrendingUp className={`h-3.5 w-3.5 ${isForecasting ? "animate-pulse" : ""}`} />
+                            </Button>
+                        )}
                         <Button
                             variant="ghost"
                             size="icon"
@@ -259,6 +305,7 @@ export function PanelCard({ panelId, savedQueryId, gridH = 3, title, onRemove, a
                                     recommendation={recommendation}
                                     compact={false}
                                     onDataPointClick={handleDataClick}
+                                    forecastData={forecastData || undefined}
                                 />
                             </div>
                         </div>

@@ -23,6 +23,7 @@ import {
     Bell,
     Settings2,
     Activity,
+    TrendingUp,
 } from "lucide-react";
 import { ChatThread } from "@/components/chat/ChatThread";
 import { ThreadSidebar } from "@/components/chat/ThreadSidebar";
@@ -126,6 +127,10 @@ function AskPageContent() {
     const [alertOp, setAlertOp] = useState("gt");
     const [alertThreshold, setAlertThreshold] = useState("");
     const [creatingAlert, setCreatingAlert] = useState(false);
+
+    // Forecasting States
+    const [isForecasting, setIsForecasting] = useState(false);
+    const [forecastData, setForecastData] = useState<{ index: number; value: number }[] | null>(null);
 
     // Initial load of parameters from URL
     useEffect(() => {
@@ -323,6 +328,43 @@ function AskPageContent() {
             toast.error("Communication failure with Alerting Core");
         } finally {
             setCreatingAlert(false);
+        }
+    };
+
+    const handleForecast = async () => {
+        if (!result || !result.chart_recommendation.x_column || !result.chart_recommendation.y_column) {
+            toast.error("Forecasting requires identified Time and Value columns");
+            return;
+        }
+
+        setIsForecasting(true);
+        setForecastData(null);
+        try {
+            const response = await authenticatedFetch("/api/forecasts/forecast", {
+                method: "POST",
+                body: JSON.stringify({
+                    date_col: result.chart_recommendation.x_column,
+                    value_col: result.chart_recommendation.y_column,
+                    periods: 7,
+                    data: result.results
+                }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.error) {
+                    toast.error(data.error);
+                } else {
+                    setForecastData(data.projections);
+                    toast.success("Intelligence Engine: 7-period projection compiled");
+                }
+            } else {
+                toast.error("Forecasting Engine timeout");
+            }
+        } catch (err) {
+            toast.error("Communication failure with Forecast Core");
+        } finally {
+            setIsForecasting(false);
         }
     };
 
@@ -751,6 +793,19 @@ function AskPageContent() {
                                                 <Download className="h-3.5 w-3.5 mr-2" />
                                                 <span className="font-bold text-[10px] uppercase tracking-wider">Download Raw</span>
                                             </Button>
+
+                                            {(result.chart_recommendation.chart_type === 'line' || result.chart_recommendation.chart_type === 'area') && (
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={handleForecast}
+                                                    disabled={isForecasting}
+                                                    className="rounded-xl px-4 border-indigo-500/30 bg-indigo-500/5 hover:bg-indigo-500/10 text-indigo-400 h-9 transition-all"
+                                                >
+                                                    {isForecasting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-2" /> : <TrendingUp className="h-3.5 w-3.5 mr-2" />}
+                                                    <span className="font-bold text-[10px] uppercase tracking-wider">{isForecasting ? "Forecasting..." : "Predict Future"}</span>
+                                                </Button>
+                                            )}
                                         </div>
                                     </CardHeader>
                                     <CardContent className="p-8">
@@ -758,6 +813,7 @@ function AskPageContent() {
                                             <AutoChart
                                                 data={result.results}
                                                 recommendation={result.chart_recommendation}
+                                                forecastData={forecastData || undefined}
                                             />
                                         </div>
                                         <div className="mt-8 p-6 rounded-2xl bg-slate-950/50 border border-slate-800/50 space-y-4">

@@ -85,8 +85,12 @@ No SQL knowledge required. Just ask, and see your data come to life.
 ### Phase 7.2: Proactive Intelligence (Completed ✅)
 - **Anomaly Detection**: AI-driven scanning for unexpected spikes or drops ✅
 - **Smart Alerting**: Threshold-based triggers for Slack, Teams, and Email ✅
-- **Trend Forecasting**: Predictive modeling based on historical data ✅
 - **Insight Monitoring**: Centralized dashboard for data health and alerts ✅
+
+### Phase 7.3: Predictive Insights (Completed ✅)
+- **Trend Forecasting**: Predictive modeling and future projections for time-series data ✅
+- **Data Discovery**: Automated "Smart Findings" feed to surface interesting data patterns ✅
+- **Forecasting Overlays**: One-click predictive visualization in Ask and Dashboard views ✅
 
 ---
 

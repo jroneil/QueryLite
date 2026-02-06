@@ -23,6 +23,7 @@ from app.models.schemas import (
     SavedQueryCreate,
     SavedQueryResponse,
     SavedQueryVersionResponse,
+    QueryJobStatus,
 )
 from app.routers.auth_deps import get_current_user
 from app.services.encryption import decrypt_connection_string
@@ -31,6 +32,8 @@ from app.services.pii_masker import PIIMasker
 from app.services.query_executor import QueryExecutor
 from app.services.rbac import RBACService
 from app.services.webhook_service import WebhookService
+from app.services.cache_service import cache_service
+from app.services.background_executor import background_executor
 
 router = APIRouter()
 
@@ -177,27 +180,46 @@ async def execute_natural_language_query(
             token_count=sql_result.token_usage
         )
 
-        # Phase 5: Query Result Caching
-        import hashlib
-
-        from app.services.cache_service import cache_service
+        # Phase 7.1: Query Result Caching (Enterprise Layer)
+        cached_data = await cache_service.get_query_result(str(data_source.id), sql_result.sql_query)
         
-        cache_key = hashlib.md5(f"{data_source.id}:{sql_result.sql_query}".encode(), usedforsecurity=False).hexdigest()  # nosec B324
-        cached_response = cache_service.get(cache_key)
-        
-        if cached_response:
+        if cached_data:
             # We still want to log that a cached query happened
             log_entry = AuditLogger.log_event(
                 db=db,
                 user_id=str(current_user.id),
                 action="query_cache_hit",
+                workspace_id=str(data_source.workspace_id) if data_source.workspace_id else None,
                 details={"question": request.question, "sql": sql_result.sql_query}
             )
             # Reconstruct QueryResponse from cache
-            resp = QueryResponse(**cached_response)
+            resp = QueryResponse(**cached_data)
+            resp.is_cached = True
             if log_entry:
                 resp.audit_log_id = log_entry.id
             return resp
+
+        # Phase 7.1: Background Execution
+        if request.run_async:
+            job_id = await background_executor.create_job()
+            
+            # Prepare response template (static metadata)
+            response_template = {
+                "sql_query": sql_result.sql_query,
+                "explanation": sql_result.explanation,
+                "results": [],
+                "row_count": 0,
+                "chart_recommendation": ChartRecommendation(chart_type="table"),
+                "execution_time_ms": 0,
+                "confidence": sql_result.confidence,
+                "job_id": job_id,
+                "status": "processing"
+            }
+            
+            # Offload to background helper
+            background_executor.start_query_task(job_id, executor, sql_result.sql_query, response_template)
+            
+            return QueryResponse(**response_template)
 
         results, execution_time = executor.execute_query(sql_result.sql_query)
         
@@ -284,8 +306,8 @@ async def execute_natural_language_query(
         if log_entry:
             response_data.audit_log_id = log_entry.id
         
-        # Store in cache
-        cache_service.set(cache_key, response_data.dict())
+        # Store in cache for future recurring performance
+        await cache_service.set_query_result(str(data_source.id), sql_result.sql_query, response_data.dict())
 
         return response_data
     except HTTPException: 
@@ -611,3 +633,12 @@ async def update_saved_query(
     db.refresh(query)
     
     return query
+
+
+@router.get("/jobs/{job_id}", response_model=QueryJobStatus)
+async def get_query_job_status(job_id: str):
+    """Poll for the status and results of a background query"""
+    job = await background_executor.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return QueryJobStatus(**job)

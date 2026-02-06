@@ -9,7 +9,9 @@ import {
     RefreshCw,
     Trash2,
     Sparkles,
-    Info
+    Info,
+    Zap,
+    Clock
 } from "lucide-react";
 import {
     Card,
@@ -42,6 +44,8 @@ export function PanelCard({ panelId, savedQueryId, gridH = 3, title, onRemove, a
     const [naturalQuery, setNaturalQuery] = useState<string>("");
     const [dataSourceId, setDataSourceId] = useState<string>("");
     const [explanation, setExplanation] = useState<string>("");
+    const [isCached, setIsCached] = useState<boolean>(false);
+    const [executionTime, setExecutionTime] = useState<number>(0);
 
     // Phase 5 States
     const [narrative, setNarrative] = useState<string | null>(null);
@@ -80,6 +84,8 @@ export function PanelCard({ panelId, savedQueryId, gridH = 3, title, onRemove, a
                 setData(result.results);
                 setRecommendation(result.chart_recommendation);
                 setExplanation(result.explanation);
+                setIsCached(result.is_cached || false);
+                setExecutionTime(result.execution_time_ms || 0);
             } else {
                 const errData = await runRes.json();
                 setError(errData.detail || "Failed to execute query");
@@ -141,9 +147,23 @@ export function PanelCard({ panelId, savedQueryId, gridH = 3, title, onRemove, a
                         <CardTitle className="text-sm font-bold text-slate-100 truncate tracking-tight">
                             {title || queryName || "Untitled Panel"}
                         </CardTitle>
-                        <p className="text-[10px] text-slate-500 truncate font-medium">
-                            {naturalQuery}
-                        </p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                            <p className="text-[10px] text-slate-500 truncate font-medium max-w-[150px]">
+                                {naturalQuery}
+                            </p>
+                            {isCached && (
+                                <div className="flex items-center gap-0.5 text-emerald-400 text-[9px] font-black uppercase tracking-tighter bg-emerald-500/10 px-1 rounded border border-emerald-500/20">
+                                    <Zap className="h-2 w-2" />
+                                    Cached
+                                </div>
+                            )}
+                            {data && executionTime > 0 && (
+                                <div className="flex items-center gap-0.5 text-slate-500 text-[9px] font-medium uppercase tracking-widest px-1">
+                                    <Clock className="h-2 w-2" />
+                                    {executionTime.toFixed(0)}ms
+                                </div>
+                            )}
+                        </div>
                     </div>
                     <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
                         <Button

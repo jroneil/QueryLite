@@ -107,6 +107,7 @@ class QueryRequest(BaseModel):
     data_source_id: UUID
     filters: Optional[dict[str, Any]] = None
     thread_id: Optional[UUID] = None # Added for Phase 6.1
+    run_async: bool = False # Flag to explicitly request background execution
 
 
 class QueryHistoryResponse(BaseModel):
@@ -152,11 +153,23 @@ class QueryResponse(BaseModel):
     requires_confirmation: bool = False
     refinement_suggestion: Optional[str] = None
     audit_log_id: Optional[UUID] = None
+    job_id: Optional[str] = None # Added for Phase 7.1
+    status: str = "completed" # completed, processing, failed
+    is_cached: bool = False # Flag for performance telemetry
 
 
 class FeedbackSubmission(BaseModel):
     """Schema for submitting feedback on a query"""
     score: int = Field(..., ge=-1, le=1) # -1, 0, or 1
+
+
+class QueryJobStatus(BaseModel):
+    """Schema for polling background query status"""
+    job_id: str
+    status: str # processing, completed, failed
+    progress: int = 0
+    result: Optional[QueryResponse] = None
+    error: Optional[str] = None
 
 
 class SchemaInfo(BaseModel):

@@ -18,6 +18,8 @@ import {
     LayoutDashboard,
     ThumbsUp,
     ThumbsDown,
+    Zap,
+    Clock,
 } from "lucide-react";
 import { ChatThread } from "@/components/chat/ChatThread";
 import { ThreadSidebar } from "@/components/chat/ThreadSidebar";
@@ -60,6 +62,9 @@ interface QueryResponse {
     chart_recommendation: ChartRecommendation;
     execution_time_ms: number;
     audit_log_id?: string;
+    job_id?: string;
+    status: "completed" | "processing" | "failed";
+    is_cached?: boolean;
 }
 
 export default function AskPage() {
@@ -91,6 +96,7 @@ function AskPageContent() {
     const [isChatMode, setIsChatMode] = useState(false);
     const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
     const [feedbackSent, setFeedbackSent] = useState<boolean>(false);
+    const [jobStatus, setJobStatus] = useState<string | null>(null);
 
     // Initial load of parameters from URL
     useEffect(() => {
@@ -160,6 +166,7 @@ function AskPageContent() {
         setResult(null);
         setSaveSuccess(false);
         setFeedbackSent(false);
+        setJobStatus(null);
 
         const loadingToast = toast.loading("Thinking...");
 
@@ -174,19 +181,53 @@ function AskPageContent() {
 
             if (response.ok) {
                 const data = await response.json();
-                setResult(data);
-                toast.success("Query successful!", { id: loadingToast });
+
+                if (data.job_id && data.status === "processing") {
+                    setJobStatus("Crunching massive dataset...");
+                    toast.loading("Heavy query detected. Offloading to background...", { id: loadingToast });
+                    pollJobStatus(data.job_id);
+                } else {
+                    setResult(data);
+                    toast.success("Query successful!", { id: loadingToast });
+                    setLoading(false);
+                }
             } else {
                 const errorData = await response.json();
                 setError(errorData.detail || "Failed to execute query");
                 toast.error(errorData.detail || "Failed to execute query", { id: loadingToast });
+                setLoading(false);
             }
         } catch (error) {
             setError("Failed to connect to the API");
             toast.error("Failed to connect to the API", { id: loadingToast });
-        } finally {
             setLoading(false);
         }
+    };
+
+    const pollJobStatus = async (jobId: string) => {
+        const interval = setInterval(async () => {
+            try {
+                const response = await authenticatedFetch(`/api/query/jobs/${jobId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.status === "completed") {
+                        clearInterval(interval);
+                        setResult(data.result);
+                        setJobStatus(null);
+                        setLoading(false);
+                        toast.success("Analysis complete!");
+                    } else if (data.status === "failed") {
+                        clearInterval(interval);
+                        setError(data.error || "Background execution failed");
+                        setJobStatus(null);
+                        setLoading(false);
+                        toast.error("Analysis failed");
+                    }
+                }
+            } catch (err) {
+                console.error("Polling error:", err);
+            }
+        }, 2000);
     };
 
     const handleSaveQuery = async () => {
@@ -469,7 +510,7 @@ function AskPageContent() {
                                                 {loading ? (
                                                     <>
                                                         <Loader2 className="h-5 w-5 animate-spin" />
-                                                        Synthesizing Result...
+                                                        {jobStatus || "Synthesizing Result..."}
                                                     </>
                                                 ) : (
                                                     <>
@@ -509,9 +550,17 @@ function AskPageContent() {
                                             </div>
                                             <div>
                                                 <CardTitle className="text-white text-lg">Visual Insights</CardTitle>
-                                                <CardDescription className="text-slate-500 text-xs">
-                                                    Generated based on {result.row_count} data points
-                                                </CardDescription>
+                                                <div className="flex items-center gap-3 mt-1">
+                                                    <CardDescription className="text-slate-500 text-xs">
+                                                        Generated based on {result.row_count} data points
+                                                    </CardDescription>
+                                                    {result.is_cached && (
+                                                        <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[9px] uppercase font-black px-1.5 py-0 flex items-center gap-1">
+                                                            <Zap className="h-2.5 w-2.5" />
+                                                            Fast Cache Hit
+                                                        </Badge>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
@@ -602,7 +651,8 @@ function AskPageContent() {
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-3">
-                                            <div className="text-[10px] text-slate-500 font-mono tracking-widest uppercase">
+                                            <div className="text-[10px] text-slate-500 font-mono tracking-widest uppercase flex items-center gap-2">
+                                                <Clock className="h-3 w-3" />
                                                 EXEC_TIME: {result.execution_time_ms.toFixed(1)}MS
                                             </div>
                                             <Button

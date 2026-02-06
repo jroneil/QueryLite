@@ -111,3 +111,11 @@ docker-compose up --build
 
 - **Database Connection**: Ensure the PostgreSQL container is running and healthy. `docker-compose ps` should show `querylite-db` as Up.
 - **API Connectivity**: If the frontend can't talk to the backend, check `NEXT_PUBLIC_API_URL` (usually `http://localhost:8000`).
+- **Connection Refused / Login Spinning**: If the frontend says "Connection Refused" during login, check backend logs: `docker compose logs backend`. Look for `NameError: name 'auth' is not defined`. This usually means a router import is missing in `backend/app/main.py`.
+- **Dashboard or /Ask 404/500 Errors**: If sub-routes fail but the landing page works, ensure there is no `app/page.tsx` file (it conflicts with the `app/(dashboard)` group). Also, verify that `middleware.ts` has been renamed to `proxy.ts` to support Next.js 16 conventions.
+
+## 5. Intelligence Protocols (Phase 7.2)
+QueryLite now includes an automated monitoring engine.
+- **Hourly Scans**: The backend automatically evaluates all Smart Alerts every hour.
+- **Intelligence Center**: Accessible at `http://localhost:3000/intelligence`.
+- **Local Mail Testing**: Use the **MailHog Web UI** at `http://localhost:8025` to see alert notifications sent via email.

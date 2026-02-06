@@ -428,3 +428,49 @@ class SavedQueryVersionResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# Alert Schemas (Phase 7.2)
+class AlertRuleCreate(BaseModel):
+    """Schema for creating a new alert rule"""
+    name: str = Field(..., min_length=1, max_length=255)
+    saved_query_id: UUID
+    condition_col: str
+    operator: str # gt, lt, eq, pct_change
+    threshold: float
+    channel_type: Optional[str] = "email"
+    channel_webhook: Optional[str] = None
+    is_active: bool = True
+
+
+class AlertRuleResponse(BaseModel):
+    """Schema for alert rule response"""
+    id: UUID
+    owner_id: UUID
+    saved_query_id: UUID
+    name: str
+    condition_col: str
+    operator: str
+    threshold: float
+    channel_type: str
+    channel_webhook: Optional[str]
+    is_active: bool
+    last_evaluated_at: Optional[datetime]
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class DataAnomalyAlertResponse(BaseModel):
+    """Schema for anomaly alert response"""
+    id: UUID
+    saved_query_id: UUID
+    severity: str
+    details: Optional[dict[str, Any]]
+    is_acknowledged: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

@@ -10,17 +10,18 @@ from app.db.database import SessionLocal, engine
 from app.db.models import User
 from app.routers import (
     auth,
-    dashboard_filters,
-    dashboards,
     data_sources,
-    insights,
-    local_files,
     query,
-    scheduled_reports,
-    threads,
     workspaces,
+    scheduled_reports,
+    dashboards,
+    insights,
+    dashboard_filters,
+    threads,
+    local_files,
     audit,
     feedback,
+    alerts,
 )
 from app.services.auth_service import get_password_hash
 from app.services.scheduler_service import scheduler_service
@@ -95,6 +96,7 @@ app.include_router(threads.router, prefix="/api", tags=["Threads"])
 app.include_router(local_files.router, prefix="/api", tags=["Local Files"])
 app.include_router(audit.router, prefix="/api", tags=["Audit"])
 app.include_router(feedback.router, prefix="/api", tags=["Feedback"])
+app.include_router(alerts.router, prefix="/api/alerts", tags=["Alerts"])
 
 
 @app.get("/health")

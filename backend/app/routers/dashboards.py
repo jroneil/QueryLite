@@ -17,6 +17,7 @@ from app.models.schemas import (
     DashboardResponse,
 )
 from app.routers.auth_deps import get_current_user
+from app.services.rbac import RBACService
 
 router = APIRouter(prefix="/dashboards", tags=["Dashboards"])
 
@@ -27,6 +28,9 @@ async def create_dashboard(
     current_user: User = Depends(get_current_user)
 ):
     """Create a new dashboard"""
+    if dashboard_data.workspace_id:
+        RBACService.check_permission(db, current_user.id, dashboard_data.workspace_id, required_role="editor")
+
     new_dashboard = Dashboard(
         name=dashboard_data.name,
         description=dashboard_data.description,
@@ -66,10 +70,12 @@ async def get_dashboard_details(
     if not dashboard:
         raise HTTPException(status_code=404, detail="Dashboard not found")
     
-    # Check access (basic check for now)
-    # If it's private and not owned by user, block
+    # If it's private and not owned by user, check workspace access
     if not dashboard.is_public and dashboard.owner_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Access denied")
+        if dashboard.workspace_id:
+            RBACService.check_permission(db, current_user.id, dashboard.workspace_id, required_role="viewer")
+        else:
+            raise HTTPException(status_code=403, detail="Access denied")
         
     return dashboard
 

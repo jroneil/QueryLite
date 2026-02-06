@@ -83,11 +83,12 @@ Generate the {db_type if db_type != 'mongodb' else 'MQL'} query:"""
                 model=self.model,
                 max_tokens=1000,
                 temperature=0.1,
-                system=self.system_prompt,
+                system=system_prompt,
                 messages=messages
             )
             
             content = response.content[0].text
+            token_usage = response.usage.input_tokens + response.usage.output_tokens if hasattr(response, 'usage') else None
             
             # Parse JSON response
             if "```json" in content:
@@ -100,14 +101,16 @@ Generate the {db_type if db_type != 'mongodb' else 'MQL'} query:"""
             return SQLGenerationResult(
                 sql_query=result.get("sql_query", ""),
                 explanation=result.get("explanation", ""),
-                confidence=result.get("confidence", 0.5)
+                confidence=result.get("confidence", 0.5),
+                token_usage=token_usage
             )
             
         except Exception as e:
             return SQLGenerationResult(
                 sql_query="",
                 explanation=f"Anthropic Error: {str(e)}",
-                confidence=0.0
+                confidence=0.0,
+                token_usage=0
             )
 
     def is_configured(self) -> bool:

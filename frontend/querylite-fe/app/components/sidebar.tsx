@@ -14,6 +14,8 @@ import {
   LogOut,
   Calendar,
   LayoutDashboard,
+  Shield,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -60,6 +62,17 @@ const navItems = [
     title: "Workspaces",
     href: "/workspaces",
     icon: Zap,
+  },
+  {
+    title: "Audit Logs",
+    // Redirect to admin audit
+    href: "/admin/audit",
+    icon: Shield,
+  },
+  {
+    title: "Settings",
+    href: "/settings",
+    icon: Settings,
   },
 ];
 

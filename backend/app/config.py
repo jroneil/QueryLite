@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     # Performance & Error Handling
     query_timeout_seconds: int = 30
     enforce_read_only: bool = False
+    enable_pii_masking: bool = True
     rate_limit_per_minute: int = 60
     pool_size: int = 5
     pool_max_overflow: int = 10

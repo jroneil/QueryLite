@@ -148,6 +148,8 @@ class AuditLog(Base):
     action = Column(String(255), nullable=False) # query_execution, data_source_create, member_invite, etc.
     details = Column(Text, nullable=True) # Store JSON or raw SQL executed
     ip_address = Column(String(50), nullable=True)
+    token_count = Column(Integer, nullable=True)
+    response_time_ms = Column(Integer, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     user = relationship("User", back_populates="audit_logs")

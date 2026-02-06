@@ -88,6 +88,7 @@ Generate the {db_type if db_type != 'mongodb' else 'MQL'} query:"""
             )
             
             content = response.choices[0].message.content
+            token_usage = response.usage.total_tokens if hasattr(response, 'usage') else None
             
             # Parse JSON response
             if "```json" in content:
@@ -100,14 +101,16 @@ Generate the {db_type if db_type != 'mongodb' else 'MQL'} query:"""
             return SQLGenerationResult(
                 sql_query=result.get("sql_query", ""),
                 explanation=result.get("explanation", ""),
-                confidence=result.get("confidence", 0.5)
+                confidence=result.get("confidence", 0.5),
+                token_usage=token_usage
             )
             
         except Exception as e:
             return SQLGenerationResult(
                 sql_query="",
                 explanation=f"OpenAI Error: {str(e)}",
-                confidence=0.0
+                confidence=0.0,
+                token_usage=0
             )
 
     def is_configured(self) -> bool:

@@ -18,7 +18,9 @@ class AuditLogger:
         action: str,
         workspace_id: Optional[str] = None,
         details: Optional[dict] = None,
-        ip_address: Optional[str] = None
+        ip_address: Optional[str] = None,
+        token_count: Optional[int] = None,
+        response_time_ms: Optional[int] = None
     ):
         """Log a security-relevant event to the database"""
         try:
@@ -28,7 +30,9 @@ class AuditLogger:
                 workspace_id=workspace_id,
                 action=action,
                 details=details_str,
-                ip_address=ip_address
+                ip_address=ip_address,
+                token_count=token_count,
+                response_time_ms=response_time_ms
             )
             db.add(audit_entry)
             db.commit()
@@ -43,7 +47,9 @@ class AuditLogger:
         user_id: str,
         sql: str,
         workspace_id: Optional[str] = None,
-        ip_address: Optional[str] = None
+        ip_address: Optional[str] = None,
+        token_count: Optional[int] = None,
+        response_time_ms: Optional[int] = None
     ):
         """Specialized helper for logging query executions"""
         AuditLogger.log_event(
@@ -52,5 +58,7 @@ class AuditLogger:
             action="query_execution",
             workspace_id=workspace_id,
             details={"sql": sql},
-            ip_address=ip_address
+            ip_address=ip_address,
+            token_count=token_count,
+            response_time_ms=response_time_ms
         )

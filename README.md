@@ -58,11 +58,16 @@ No SQL knowledge required. Just ask, and see your data come to life.
 - **Conversational Memory**: Multi-turn chat interface that remembers context across follow-up questions.
 - **Thread Management**: Persistent conversation threads with search and history management.
 
-### Phase 6.2: Core Platform Power (In Progress 🚀)
+### Phase 6.2: Core Platform Power (Completed ✅)
 - **Universal Connectors**: Support for PostgreSQL, MySQL, and DuckDB (for local CSV/Excel/Parquet files).
 - **NoSQL Support**: Native MongoDB integration with schema sampling and MQL (MongoDB Query Language) generation.
 - **Query Versioning**: Time Machine for saved queries—track evolution and revert to previous logic.
 - **Connector SDK**: Standardized `BaseConnector` interface for easy expansion to any data source.
+
+### Phase 6.3: Governance & Security (In Progress 🚀)
+- **RBAC (Role-Based Access Control)**: Granular permissions (Admin, Editor, Viewer).
+- **PII Masking**: AI-powered detection and redaction of sensitive data in results.
+- **Audit Logger Pro**: Dedicated administrative UI for monitoring security events and token usage.
 
 ---
 

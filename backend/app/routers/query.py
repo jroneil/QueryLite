@@ -27,7 +27,9 @@ from app.models.schemas import (
 from app.routers.auth_deps import get_current_user
 from app.services.encryption import decrypt_connection_string
 from app.services.llm_service import get_llm_service
+from app.services.pii_masker import PIIMasker
 from app.services.query_executor import QueryExecutor
+from app.services.rbac import RBACService
 from app.services.webhook_service import WebhookService
 
 router = APIRouter()
@@ -45,14 +47,16 @@ async def execute_natural_language_query(
     from app.middleware.read_only_enforcer import is_safe_sql
     from app.services.audit_logger import AuditLogger
 
-    # Get data source and verify ownership
-    data_source = db.query(DataSource).filter(
-        DataSource.id == request.data_source_id,
-        DataSource.user_id == current_user.id
-    ).first()
-    
+    # Get data source
+    data_source = db.query(DataSource).get(request.data_source_id)
     if not data_source:
-        raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, detail="Data source not found or access denied")
+        raise HTTPException(status_code=404, detail="Data source not found")
+        
+    # Permission check: Owner or has workspace access
+    if data_source.user_id != current_user.id:
+        if not data_source.workspace_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+        RBACService.check_permission(db, current_user.id, data_source.workspace_id, required_role="viewer")
     
     # Audit trail for the request
     AuditLogger.log_event(
@@ -161,12 +165,13 @@ async def execute_natural_language_query(
                 refinement_suggestion=llm_service.refine_query(request.question, "", schema_info)
             )
             
-        # Audit log the execution
+        # Audit log the execution (we'll update this with real numbers after execution)
         AuditLogger.log_query(
             db=db,
             user_id=str(current_user.id),
             sql=sql_result.sql_query,
-            workspace_id=str(data_source.workspace_id) if data_source.workspace_id else None
+            workspace_id=str(data_source.workspace_id) if data_source.workspace_id else None,
+            token_count=sql_result.token_usage
         )
 
         # Phase 5: Query Result Caching
@@ -189,6 +194,11 @@ async def execute_natural_language_query(
             return QueryResponse(**cached_response)
 
         results, execution_time = executor.execute_query(sql_result.sql_query)
+        
+        # Apply PII Masking
+        settings = get_settings()
+        results = PIIMasker.mask_results(results, enabled=settings.enable_pii_masking)
+        
         chart_recommendation = executor.recommend_chart_type(results)
         
         # Save to query history
@@ -253,6 +263,17 @@ async def execute_natural_language_query(
             execution_time_ms=execution_time,
             confidence=sql_result.confidence
         )
+
+        # Final audit log update with execution time
+        AuditLogger.log_event(
+            db=db,
+            user_id=str(current_user.id),
+            action="query_complete",
+            workspace_id=str(data_source.workspace_id) if data_source.workspace_id else None,
+            details={"sql": sql_result.sql_query, "row_count": len(results)},
+            token_count=sql_result.token_usage,
+            response_time_ms=int(execution_time)
+        )
         
         # Store in cache
         cache_service.set(cache_key, response_data.dict())
@@ -285,13 +306,16 @@ async def save_query(
     current_user: User = Depends(get_current_user)
 ):
     """Save a query as a favorite"""
-    # Verify data source ownership
-    ds = db.query(DataSource).filter(
-        DataSource.id == request.data_source_id,
-        DataSource.user_id == current_user.id
-    ).first()
+    # Get data source
+    ds = db.query(DataSource).get(request.data_source_id)
     if not ds:
         raise HTTPException(status_code=404, detail="Data source not found")
+        
+    # Permission check: Owner or Editor in workspace
+    if ds.user_id != current_user.id:
+        if not ds.workspace_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+        RBACService.check_permission(db, current_user.id, ds.workspace_id, required_role="editor")
 
     saved = SavedQuery(
         user_id=current_user.id,
@@ -348,13 +372,16 @@ async def get_saved_query(
     current_user: User = Depends(get_current_user)
 ):
     """Get details for a specific saved query"""
-    query = db.query(SavedQuery).filter(
-        SavedQuery.id == query_id,
-        SavedQuery.user_id == current_user.id
-    ).first()
-    
+    query = db.query(SavedQuery).get(query_id)
     if not query:
         raise HTTPException(status_code=404, detail="Saved query not found")
+        
+    # Permission check: Owner or has workspace access
+    if query.user_id != current_user.id:
+        ds = db.query(DataSource).get(query.data_source_id)
+        if not ds or not ds.workspace_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+        RBACService.check_permission(db, current_user.id, ds.workspace_id, required_role="viewer")
         
     return query
 
@@ -539,13 +566,16 @@ async def update_saved_query(
     current_user: User = Depends(get_current_user)
 ):
     """Update a saved query and create a new version"""
-    query = db.query(SavedQuery).filter(
-        SavedQuery.id == query_id,
-        SavedQuery.user_id == current_user.id
-    ).first()
-    
+    query = db.query(SavedQuery).get(query_id)
     if not query:
         raise HTTPException(status_code=404, detail="Saved query not found")
+        
+    # Permission check: Owner or has editor workspace access
+    if query.user_id != current_user.id:
+        ds = db.query(DataSource).get(query.data_source_id)
+        if not ds or not ds.workspace_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+        RBACService.check_permission(db, current_user.id, ds.workspace_id, required_role="editor")
         
     # Update fields
     query.name = request.name

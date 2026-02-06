@@ -16,6 +16,8 @@ import {
   LayoutDashboard,
   Shield,
   Settings,
+  Eye,
+  Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -27,6 +29,11 @@ const navItems = [
     title: "Dashboard",
     href: "/",
     icon: Home,
+  },
+  {
+    title: "Intelligence",
+    href: "/intelligence",
+    icon: Eye,
   },
   {
     title: "Dashboards",

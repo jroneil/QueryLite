@@ -5,11 +5,12 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from app.db.database import SessionLocal
-from app.db.models import DataSource, SavedQuery, ScheduledReport
+from app.db.models import DataSource, SavedQuery, ScheduledReport, AlertRule, DataAnomalyAlert
 from app.services.encryption import decrypt_connection_string
 from app.services.notifications.email_service import SMTPEmailProvider
 from app.services.query_executor import QueryExecutor
 from app.services.notification_integrations import SlackWebhookClient, TeamsWebhookClient
+from app.services.anomaly_detector import AnomalyDetector
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,16 @@ class ReportScheduler:
             active_reports = db.query(ScheduledReport).filter(ScheduledReport.is_active).all()
             for report in active_reports:
                 self.add_report_job(report)
-            logger.info(f"Loaded {len(active_reports)} active schedules.")
+            
+            # Add Global Alert & Anomaly Evaluation Job (Runs every hour)
+            self.scheduler.add_job(
+                self.evaluate_alerts_and_anomalies,
+                CronTrigger(minute=0), # Top of every hour
+                id="global_intelligence_job",
+                replace_existing=True
+            )
+            
+            logger.info(f"Loaded {len(active_reports)} reports and initialized Intelligence Engine.")
         except Exception as e:
             logger.error(f"Error synchronizing schedules: {e}")
         finally:
@@ -157,6 +167,103 @@ class ReportScheduler:
             logger.error(f"Unexpected error in execute_report for {report_id}: {e}")
         finally:
             db.close()
+
+    async def evaluate_alerts_and_anomalies(self):
+        """Background task to process smart alerts and scan for anomalies"""
+        logger.info("Executing global intelligence scan (Alerts & Anomalies)...")
+        db = SessionLocal()
+        try:
+            # 1. Process Threshold Alerts
+            active_rules = db.query(AlertRule).filter(AlertRule.is_active).all()
+            for rule in active_rules:
+                try:
+                    await self._evaluate_single_alert(rule, db)
+                except Exception as e:
+                    logger.error(f"Failed to evaluate alert rule {rule.id}: {e}")
+            
+            logger.info("Intelligence scan complete.")
+        except Exception as e:
+            logger.error(f"Error in evaluate_alerts_and_anomalies: {e}")
+        finally:
+            db.close()
+
+    async def _evaluate_single_alert(self, rule: AlertRule, db):
+        """Internal logic to check a single threshold rule"""
+        query = db.query(SavedQuery).get(rule.saved_query_id)
+        if not query: return
+        
+        data_source = db.query(DataSource).get(query.data_source_id)
+        if not data_source: return
+
+        # Execute Query
+        try:
+            if data_source.type == "duckdb":
+                executor = QueryExecutor(ds_type="duckdb", file_path=data_source.file_path, data_source_id=str(data_source.id))
+            else:
+                conn = decrypt_connection_string(data_source.connection_string_encrypted)
+                executor = QueryExecutor(conn, data_source_id=str(data_source.id))
+            
+            results, _ = executor.execute_query(query.generated_sql)
+            executor.close()
+        except Exception as e:
+            logger.error(f"SQL failed for alert {rule.name}: {e}")
+            return
+
+        if not results: return
+
+        # 1. Check for Threshold Triggers
+        latest_val = None
+        # Try to find the value in the first row per the condition_col
+        if results and rule.condition_col in results[0]:
+            try:
+                latest_val = float(results[0][rule.condition_col])
+            except (ValueError, TypeError):
+                pass
+
+        if latest_val is not None:
+            triggered = AnomalyDetector.check_threshold(latest_val, rule.operator, rule.threshold)
+            
+            if triggered:
+                logger.info(f"ALERT TRIGGERED: {rule.name} (Val: {latest_val} {rule.operator} {rule.threshold})")
+                await self._deliver_alert_notification(rule, query, latest_val)
+                
+            rule.last_evaluated_at = datetime.now()
+            db.commit()
+
+        # 2. Check for Statistical Anomalies in the result set
+        # We auto-scan numeric columns for anomalies
+        numeric_cols = [k for k, v in results[0].items() if isinstance(v, (int, float))]
+        for col in numeric_cols:
+            anomalies = AnomalyDetector.detect_anomalies(results, col)
+            if anomalies:
+                # Create Anomaly Alert in DB
+                new_anomaly = DataAnomalyAlert(
+                    saved_query_id=query.id,
+                    severity="high" if any(a['z_score'] > 5 for a in anomalies) else "medium",
+                    details={"column": col, "anomalies": anomalies[:5]} # Limit to first 5
+                )
+                db.add(new_anomaly)
+                db.commit()
+                logger.info(f"ANOMALY PERSISTED for query {query.name} on column {col}")
+
+    async def _deliver_alert_notification(self, rule: AlertRule, query: SavedQuery, current_val: float):
+        """Route alert notifications to specified channels"""
+        text = f"🚨 *Alert Triggered:* {rule.name}\n\n*Query:* {query.natural_language_query}\n*Condition:* {rule.condition_col} {rule.operator} {rule.threshold}\n*Current Value:* {current_val}"
+        title = f"QueryLite ALERT: {rule.name}"
+        
+        if rule.channel_type == "slack" and rule.channel_webhook:
+            await SlackWebhookClient.send_message(rule.channel_webhook, text, title=title)
+        elif rule.channel_type == "teams" and rule.channel_webhook:
+            await TeamsWebhookClient.send_message(rule.channel_webhook, text, title=title)
+        elif rule.channel_type == "email":
+            # Reuse email provider for simple text alert
+            user = rule.owner
+            if user:
+                await self.email_provider.send_email(
+                    recipients=[user.email],
+                    subject=title,
+                    body=text.replace("*", "").replace("🚨", "") # Strip markdown for plain email
+                )
 
 # Singleton instance
 scheduler_service = ReportScheduler()

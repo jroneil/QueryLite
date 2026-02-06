@@ -56,6 +56,22 @@ export function PanelCard({ panelId, savedQueryId, gridH = 3, title, onRemove, a
     // Calculate height based on grid_h units (1 unit ≈ 80px)
     const contentHeight = Math.max(160, gridH * 80);
 
+    // Phase 7.2 Anomalies
+    const [anomalies, setAnomalies] = useState<any[]>([]);
+
+    const fetchAnomalies = async () => {
+        try {
+            const res = await authenticatedFetch("/api/alerts/anomalies");
+            if (res.ok) {
+                const allAnomalies = await res.json();
+                const filtered = allAnomalies.filter((a: any) => a.saved_query_id === savedQueryId && !a.is_acknowledged);
+                setAnomalies(filtered);
+            }
+        } catch (err) {
+            console.error("Failed to sync anomalies", err);
+        }
+    };
+
     const fetchPanelData = async () => {
         setLoading(true);
         setError(null);
@@ -133,6 +149,7 @@ export function PanelCard({ panelId, savedQueryId, gridH = 3, title, onRemove, a
 
     useEffect(() => {
         fetchPanelData();
+        fetchAnomalies();
     }, [savedQueryId, activeFilters]);
 
     return (
@@ -161,6 +178,12 @@ export function PanelCard({ panelId, savedQueryId, gridH = 3, title, onRemove, a
                                 <div className="flex items-center gap-0.5 text-slate-500 text-[9px] font-medium uppercase tracking-widest px-1">
                                     <Clock className="h-2 w-2" />
                                     {executionTime.toFixed(0)}ms
+                                </div>
+                            )}
+                            {anomalies.length > 0 && (
+                                <div className="flex items-center gap-0.5 text-rose-400 text-[9px] font-black uppercase tracking-tighter bg-rose-500/10 px-1 rounded border border-rose-500/20 animate-pulse">
+                                    <AlertCircle className="h-2 w-2" />
+                                    Anomaly Detected
                                 </div>
                             )}
                         </div>

@@ -20,6 +20,9 @@ import {
     ThumbsDown,
     Zap,
     Clock,
+    Bell,
+    Settings2,
+    Activity,
 } from "lucide-react";
 import { ChatThread } from "@/components/chat/ChatThread";
 import { ThreadSidebar } from "@/components/chat/ThreadSidebar";
@@ -30,6 +33,23 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+    DialogFooter,
+} from "@/components/ui/dialog";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -97,6 +117,15 @@ function AskPageContent() {
     const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
     const [feedbackSent, setFeedbackSent] = useState<boolean>(false);
     const [jobStatus, setJobStatus] = useState<string | null>(null);
+    const [savedQueryId, setSavedQueryId] = useState<string | null>(null);
+
+    // Alert Form States
+    const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
+    const [alertName, setAlertName] = useState("");
+    const [alertCol, setAlertCol] = useState("");
+    const [alertOp, setAlertOp] = useState("gt");
+    const [alertThreshold, setAlertThreshold] = useState("");
+    const [creatingAlert, setCreatingAlert] = useState(false);
 
     // Initial load of parameters from URL
     useEffect(() => {
@@ -245,6 +274,8 @@ function AskPageContent() {
                 }),
             });
             if (response.ok) {
+                const data = await response.json();
+                setSavedQueryId(data.id);
                 setSaveSuccess(true);
                 toast.success("Query saved to favorites!");
             } else {
@@ -255,6 +286,43 @@ function AskPageContent() {
             toast.error("Failed to save query");
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleCreateAlert = async () => {
+        if (!savedQueryId || !alertName || !alertCol || !alertThreshold) {
+            toast.error("Please complete all alert parameters");
+            return;
+        }
+
+        setCreatingAlert(true);
+        try {
+            const response = await authenticatedFetch("/api/alerts/", {
+                method: "POST",
+                body: JSON.stringify({
+                    name: alertName,
+                    saved_query_id: savedQueryId,
+                    condition_col: alertCol,
+                    operator: alertOp,
+                    threshold: parseFloat(alertThreshold),
+                    channel_type: "email",
+                    is_active: true
+                }),
+            });
+
+            if (response.ok) {
+                toast.success("Smart alert agent activated!");
+                setIsAlertModalOpen(false);
+                // Reset form
+                setAlertName("");
+                setAlertThreshold("");
+            } else {
+                toast.error("Failed to initialize alert protocol");
+            }
+        } catch (err) {
+            toast.error("Communication failure with Alerting Core");
+        } finally {
+            setCreatingAlert(false);
         }
     };
 
@@ -574,6 +642,95 @@ function AskPageContent() {
                                                 {saving ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : saveSuccess ? <Check className="h-3.5 w-3.5 mr-2" /> : <Save className="h-3.5 w-3.5 mr-2" />}
                                                 <span className="font-bold text-[10px] uppercase tracking-wider">{saveSuccess ? "Stored in Vault" : "Favorite Query"}</span>
                                             </Button>
+
+                                            {saveSuccess && (
+                                                <Dialog open={isAlertModalOpen} onOpenChange={setIsAlertModalOpen}>
+                                                    <DialogTrigger asChild>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="rounded-xl px-4 border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-400 h-9 transition-all animate-in zoom-in-95"
+                                                        >
+                                                            <Bell className="h-3.5 w-3.5 mr-2 animate-pulse" />
+                                                            <span className="font-bold text-[10px] uppercase tracking-wider">Set Smart Alert</span>
+                                                        </Button>
+                                                    </DialogTrigger>
+                                                    <DialogContent className="bg-slate-900 border-white/5 rounded-3xl p-8 max-w-md">
+                                                        <DialogHeader>
+                                                            <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-4">
+                                                                <Activity className="h-6 w-6 text-emerald-400" />
+                                                            </div>
+                                                            <DialogTitle className="text-white font-black text-2xl uppercase tracking-tighter">Define Intelligence Trigger</DialogTitle>
+                                                            <DialogDescription className="text-slate-400 text-sm mt-2 leading-relaxed">
+                                                                Configure a smart monitor that evaluates your data automatically and notifies you of breaches.
+                                                            </DialogDescription>
+                                                        </DialogHeader>
+
+                                                        <div className="space-y-6 py-6">
+                                                            <div className="space-y-2">
+                                                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Alert Name</Label>
+                                                                <Input
+                                                                    placeholder="e.g. Revenue Drop Alert"
+                                                                    value={alertName}
+                                                                    onChange={(e) => setAlertName(e.target.value)}
+                                                                    className="bg-slate-950/50 border-white/5 h-12 rounded-xl text-white"
+                                                                />
+                                                            </div>
+
+                                                            <div className="grid grid-cols-2 gap-4">
+                                                                <div className="space-y-2">
+                                                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Target Metric</Label>
+                                                                    <Select value={alertCol} onValueChange={setAlertCol}>
+                                                                        <SelectTrigger className="bg-slate-950/50 border-white/5 h-12 rounded-xl text-white">
+                                                                            <SelectValue placeholder="Column" />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent className="bg-slate-900 border-white/10">
+                                                                            {Object.keys(result.results[0] || {}).map(col => (
+                                                                                <SelectItem key={col} value={col} className="text-white">{col}</SelectItem>
+                                                                            ))}
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                </div>
+                                                                <div className="space-y-2">
+                                                                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Condition</Label>
+                                                                    <Select value={alertOp} onValueChange={setAlertOp}>
+                                                                        <SelectTrigger className="bg-slate-950/50 border-white/5 h-12 rounded-xl text-white">
+                                                                            <SelectValue />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent className="bg-slate-900 border-white/10">
+                                                                            <SelectItem value="gt text-white">Greater Than</SelectItem>
+                                                                            <SelectItem value="lt text-white">Less Than</SelectItem>
+                                                                            <SelectItem value="eq text-white">Equal To</SelectItem>
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="space-y-2">
+                                                                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Threshold Value</Label>
+                                                                <Input
+                                                                    type="number"
+                                                                    placeholder="Enter numeric value"
+                                                                    value={alertThreshold}
+                                                                    onChange={(e) => setAlertThreshold(e.target.value)}
+                                                                    className="bg-slate-950/50 border-white/5 h-12 rounded-xl text-white"
+                                                                />
+                                                            </div>
+                                                        </div>
+
+                                                        <DialogFooter className="mt-4">
+                                                            <Button
+                                                                onClick={handleCreateAlert}
+                                                                disabled={creatingAlert}
+                                                                className="w-full h-12 bg-emerald-600 hover:bg-emerald-500 text-white font-bold uppercase tracking-widest rounded-xl transition-all shadow-[0_4px_20px_rgba(16,185,129,0.3)]"
+                                                            >
+                                                                {creatingAlert ? <Loader2 className="h-4 w-4 animate-spin" /> : <Activity className="h-4 w-4 mr-2 text-white/50" />}
+                                                                {creatingAlert ? "Activating Monitor..." : "Initialize Protocol"}
+                                                            </Button>
+                                                        </DialogFooter>
+                                                    </DialogContent>
+                                                </Dialog>
+                                            )}
                                             <Button
                                                 variant="outline"
                                                 size="sm"

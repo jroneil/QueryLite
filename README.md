@@ -82,6 +82,11 @@ No SQL knowledge required. Just ask, and see your data come to life.
 - [x] Performance Telemetry: Real-time cache and execution timing indicators ✅
 - [ ] Native support for BigQuery & Snowflake enterprise warehouses
 
+### Phase 7.2: Proactive Intelligence (In Progress 🚀)
+- **Anomaly Detection**: AI-driven scanning for unexpected spikes or drops.
+- **Smart Alerting**: Threshold-based triggers for Slack, Teams, and Email.
+- **Insight Monitoring**: Centralized dashboard for data health and alerts.
+
 ---
 
 ## Tech Stack

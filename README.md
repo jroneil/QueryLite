@@ -82,10 +82,10 @@ No SQL knowledge required. Just ask, and see your data come to life.
 - [x] Performance Telemetry: Real-time cache and execution timing indicators ✅
 - [ ] Native support for BigQuery & Snowflake enterprise warehouses
 
-### Phase 7.2: Proactive Intelligence (In Progress 🚀)
-- **Anomaly Detection**: AI-driven scanning for unexpected spikes or drops.
-- **Smart Alerting**: Threshold-based triggers for Slack, Teams, and Email.
-- **Insight Monitoring**: Centralized dashboard for data health and alerts.
+### Phase 7.2: Proactive Intelligence (Completed ✅)
+- **Anomaly Detection**: AI-driven scanning for unexpected spikes or drops ✅
+- **Smart Alerting**: Threshold-based triggers for Slack, Teams, and Email ✅
+- **Insight Monitoring**: Centralized dashboard for data health and alerts ✅
 
 ---
 
@@ -260,6 +260,8 @@ DATABASE_URL=postgresql://querylite:querylite_secret@localhost:5432/querylite
 - **Outbound Webhooks**: Real-time HTTP notifications for team activity (Slack/Discord ready)
 - **Conversational Memory**: Multi-turn analytical sessions that remember context across follow-up questions
 - **Toast Notifications**: Interactive UI with real-time feedback and keyboard shortcuts (Ctrl+Enter)
+- **Proactive Intelligence**: Automated AI-driven anomaly detection with real-time dashboard indicators
+- **Intelligence Center**: Centralized management for smart threshold-based alerts and data health insights
 
 ## Environment Variables
 

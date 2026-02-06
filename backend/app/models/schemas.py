@@ -151,6 +151,12 @@ class QueryResponse(BaseModel):
     confidence: float
     requires_confirmation: bool = False
     refinement_suggestion: Optional[str] = None
+    audit_log_id: Optional[UUID] = None
+
+
+class FeedbackSubmission(BaseModel):
+    """Schema for submitting feedback on a query"""
+    score: int = Field(..., ge=-1, le=1) # -1, 0, or 1
 
 
 class SchemaInfo(BaseModel):
@@ -220,6 +226,8 @@ class ScheduledReportCreate(BaseModel):
     saved_query_id: UUID
     schedule_cron: str = Field(..., min_length=5)
     recipient_emails: List[str] # Expecting a list from the frontend
+    channel_type: Optional[str] = "email" # email, slack, teams
+    channel_webhook: Optional[str] = None
     is_active: bool = True
 
     @field_validator("recipient_emails", mode="before")
@@ -242,6 +250,8 @@ class ScheduledReportResponse(BaseModel):
     schedule_cron: str
     recipient_emails: List[str]
     is_active: bool
+    channel_type: str
+    channel_webhook: Optional[str]
     last_run_at: Optional[datetime]
     created_at: datetime
     updated_at: datetime

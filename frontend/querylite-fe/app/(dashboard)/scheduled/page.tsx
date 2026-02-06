@@ -37,8 +37,11 @@ interface ScheduledReport {
     recipient_emails: string[];
     is_active: boolean;
     last_run_at: string | null;
+    channel_type: string;
+    channel_webhook: string | null;
     created_at: string;
     updated_at: string;
+    panels: any[];
 }
 
 export default function ScheduledReportsPage() {
@@ -208,14 +211,28 @@ export default function ScheduledReportsPage() {
                             <CardContent className="px-6 py-4 border-y border-slate-800/50 bg-slate-950/30">
                                 <div className="space-y-3">
                                     <div className="flex items-start gap-2">
-                                        <Mail className="h-4 w-4 text-slate-500 mt-0.5" />
-                                        <div className="flex flex-wrap gap-1">
-                                            {report.recipient_emails.map(email => (
-                                                <Badge key={email} className="bg-slate-800 text-slate-400 border-slate-700 font-normal">
-                                                    {email}
-                                                </Badge>
-                                            ))}
-                                        </div>
+                                        {report.channel_type === "slack" ? (
+                                            <div className="flex items-center gap-2">
+                                                <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20">Slack</Badge>
+                                                <span className="text-xs text-slate-500 truncate max-w-[200px]">{report.channel_webhook}</span>
+                                            </div>
+                                        ) : report.channel_type === "teams" ? (
+                                            <div className="flex items-center gap-2">
+                                                <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20">Teams</Badge>
+                                                <span className="text-xs text-slate-500 truncate max-w-[200px]">{report.channel_webhook}</span>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-start gap-2">
+                                                <Mail className="h-4 w-4 text-slate-500 mt-0.5" />
+                                                <div className="flex flex-wrap gap-1">
+                                                    {report.recipient_emails.map(email => (
+                                                        <Badge key={email} className="bg-slate-800 text-slate-400 border-slate-700 font-normal">
+                                                            {email}
+                                                        </Badge>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                     {report.last_run_at && (
                                         <div className="flex items-center gap-2 text-xs text-slate-500">

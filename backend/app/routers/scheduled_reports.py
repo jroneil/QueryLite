@@ -38,6 +38,8 @@ async def create_scheduled_report(
         saved_query_id=report_data.saved_query_id,
         schedule_cron=report_data.schedule_cron,
         recipient_emails=report_data.recipient_emails,
+        channel_type=report_data.channel_type,
+        channel_webhook=report_data.channel_webhook,
         is_active=report_data.is_active
     )
     db.add(new_report)
@@ -96,6 +98,8 @@ async def update_scheduled_report(
     report.name = report_data.name
     report.schedule_cron = report_data.schedule_cron
     report.recipient_emails = report_data.recipient_emails
+    report.channel_type = report_data.channel_type
+    report.channel_webhook = report_data.channel_webhook
     report.is_active = report_data.is_active
     
     db.commit()

@@ -20,6 +20,7 @@ from app.routers import (
     threads,
     workspaces,
     audit,
+    feedback,
 )
 from app.services.auth_service import get_password_hash
 from app.services.scheduler_service import scheduler_service
@@ -93,6 +94,7 @@ app.include_router(dashboard_filters.router, prefix="/api", tags=["Dashboard Fil
 app.include_router(threads.router, prefix="/api", tags=["Threads"])
 app.include_router(local_files.router, prefix="/api", tags=["Local Files"])
 app.include_router(audit.router, prefix="/api", tags=["Audit"])
+app.include_router(feedback.router, prefix="/api", tags=["Feedback"])
 
 
 @app.get("/health")

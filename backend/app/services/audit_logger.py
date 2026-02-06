@@ -36,10 +36,13 @@ class AuditLogger:
             )
             db.add(audit_entry)
             db.commit()
+            db.refresh(audit_entry)
+            return audit_entry
         except Exception as e:
             # We don't want to crash the request if logging fails, 
             # but in a production enterprise app, you might want to handle this more strictly.
             print(f"FAILED TO AUDIT LOG: {str(e)}")
+            return None
 
     @staticmethod
     def log_query(

@@ -102,7 +102,10 @@ async def execute_natural_language_query(
             filter_strs = []
             for col, val in request.filters.items():
                 if val:
-                    filter_strs.append(f"{col} is {val}")
+                    if col == "__date_range":
+                        refined_question += f" for the period {val}"
+                    else:
+                        filter_strs.append(f"{col} is {val}")
             if filter_strs:
                 refined_question += " where " + " and ".join(filter_strs)
 
@@ -184,14 +187,17 @@ async def execute_natural_language_query(
         
         if cached_response:
             # We still want to log that a cached query happened
-            AuditLogger.log_event(
+            log_entry = AuditLogger.log_event(
                 db=db,
                 user_id=str(current_user.id),
                 action="query_cache_hit",
                 details={"question": request.question, "sql": sql_result.sql_query}
             )
             # Reconstruct QueryResponse from cache
-            return QueryResponse(**cached_response)
+            resp = QueryResponse(**cached_response)
+            if log_entry:
+                resp.audit_log_id = log_entry.id
+            return resp
 
         results, execution_time = executor.execute_query(sql_result.sql_query)
         
@@ -265,7 +271,7 @@ async def execute_natural_language_query(
         )
 
         # Final audit log update with execution time
-        AuditLogger.log_event(
+        log_entry = AuditLogger.log_event(
             db=db,
             user_id=str(current_user.id),
             action="query_complete",
@@ -274,6 +280,9 @@ async def execute_natural_language_query(
             token_count=sql_result.token_usage,
             response_time_ms=int(execution_time)
         )
+        
+        if log_entry:
+            response_data.audit_log_id = log_entry.id
         
         # Store in cache
         cache_service.set(cache_key, response_data.dict())

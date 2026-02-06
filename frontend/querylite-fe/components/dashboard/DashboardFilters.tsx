@@ -10,7 +10,8 @@ import {
     Check,
     ChevronDown,
     Trash2,
-    Loader2
+    Loader2,
+    Clock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,9 +43,10 @@ interface DashboardFilter {
 interface DashboardFiltersProps {
     dashboardId: string;
     onFiltersChange: (activeFilters: Record<string, any>) => void;
+    externalFilters?: Record<string, any>;
 }
 
-export function DashboardFilters({ dashboardId, onFiltersChange }: DashboardFiltersProps) {
+export function DashboardFilters({ dashboardId, onFiltersChange, externalFilters }: DashboardFiltersProps) {
     const [filters, setFilters] = useState<DashboardFilter[]>([]);
     const [activeValues, setActiveValues] = useState<Record<string, any>>({});
     const [isOpen, setIsOpen] = useState(false);
@@ -58,6 +60,13 @@ export function DashboardFilters({ dashboardId, onFiltersChange }: DashboardFilt
     useEffect(() => {
         fetchFilters();
     }, [dashboardId]);
+
+    useEffect(() => {
+        if (externalFilters) {
+            // Merge external filters into active values
+            setActiveValues(prev => ({ ...prev, ...externalFilters }));
+        }
+    }, [externalFilters]);
 
     const fetchFilters = async () => {
         try {
@@ -146,6 +155,29 @@ export function DashboardFilters({ dashboardId, onFiltersChange }: DashboardFilt
                 <Filter className="h-3.5 w-3.5" />
                 <span>Filters</span>
             </div>
+
+            {/* Global Date Filter (Quick Win 6.4.5) */}
+            <div className="flex items-center gap-2">
+                <Select
+                    value={activeValues["__date_range"] || "all"}
+                    onValueChange={(val) => updateValue("__date_range", val === "all" ? "" : val)}
+                >
+                    <SelectTrigger className="h-8 border-slate-700 bg-slate-900/50 hover:bg-slate-800 text-xs gap-2 min-w-[140px] text-slate-300 rounded-xl">
+                        <Clock className="h-3 w-3 text-amber-400" />
+                        <SelectValue placeholder="Time Horizon" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-800 text-white">
+                        <SelectItem value="all">All Time</SelectItem>
+                        <SelectItem value="last 7 days">Last 7 Days</SelectItem>
+                        <SelectItem value="last 30 days">Last 30 Days</SelectItem>
+                        <SelectItem value="last 90 days">Last 90 Days</SelectItem>
+                        <SelectItem value="this year">This Year</SelectItem>
+                        <SelectItem value="this month">This Month</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+
+            <div className="w-[1px] h-4 bg-slate-800 mx-1 hidden md:block" />
 
             {filters.map((filter) => (
                 <div key={filter.id} className="flex items-center gap-2">

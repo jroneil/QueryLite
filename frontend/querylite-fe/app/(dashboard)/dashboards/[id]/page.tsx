@@ -12,7 +12,10 @@ import {
     Loader2,
     Sparkles,
     BookOpen,
-    X
+    X,
+    FileDown,
+    FileJson,
+    Presentation
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { authenticatedFetch } from "@/lib/api";
@@ -21,6 +24,7 @@ import { DashboardFilters } from "@/components/dashboard/DashboardFilters";
 import { toast } from "sonner";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { exportDashboardToPDF, exportDashboardToPPT } from "@/lib/export-service";
 
 interface Dashboard {
     id: string;
@@ -42,15 +46,15 @@ export default function DashboardDetailPage() {
     const [refreshing, setRefreshing] = useState(false);
     const [activeFilters, setActiveFilters] = useState<Record<string, any>>({});
 
-    // Summary State
     const [summary, setSummary] = useState<string | null>(null);
     const [generatingSummary, setGeneratingSummary] = useState(false);
+    const [exporting, setExporting] = useState(false);
 
     const fetchDashboard = async () => {
         try {
             const response = await authenticatedFetch(`/api/dashboards/${params.id}`);
             if (response.ok) {
-                console.log("Response is ok"+response);
+                console.log("Response is ok" + response);
                 const data = await response.json();
                 setDashboard(data);
             } else {
@@ -95,6 +99,47 @@ export default function DashboardDetailPage() {
     const handleRefresh = () => {
         setRefreshing(true);
         fetchDashboard();
+    };
+
+    const handleExportPDF = async () => {
+        if (!dashboard) return;
+        setExporting(true);
+        const tid = toast.loading("Capturing dashboard state for PDF...");
+        try {
+            await exportDashboardToPDF(dashboard.id, dashboard.name);
+            toast.success("PDF Export complete", { id: tid });
+        } catch (err) {
+            toast.error("PDF Export failed", { id: tid });
+        } finally {
+            setExporting(false);
+        }
+    };
+
+    const handleExportPPT = async () => {
+        if (!dashboard) return;
+        setExporting(true);
+        const tid = toast.loading("Assembling PowerPoint slides...");
+        try {
+            const panels = dashboard.panels.map(p => ({
+                id: p.id,
+                title: p.title_override || "Panel"
+            }));
+            await exportDashboardToPPT(dashboard.id, dashboard.name, panels);
+            toast.success("PowerPoint generated", { id: tid });
+        } catch (err) {
+            toast.error("PowerPoint assembly failed", { id: tid });
+        } finally {
+            setExporting(false);
+        }
+    };
+
+    const handleChartInteraction = (filter: { column: string, value: any }) => {
+        const newFilters = { ...activeFilters, [filter.column]: filter.value };
+        setActiveFilters(newFilters);
+        toast.info(`Filtering dashboard by ${filter.column}: ${filter.value}`, {
+            icon: <RefreshCw className="h-3 w-3 animate-spin" />,
+            duration: 2000
+        });
     };
 
     const handleRemovePanel = async (panelId: string) => {
@@ -176,6 +221,27 @@ export default function DashboardDetailPage() {
                         <Button
                             variant="ghost"
                             size="sm"
+                            disabled={exporting}
+                            className="h-10 rounded-xl text-rose-400 hover:text-rose-300 hover:bg-rose-400/10 font-bold text-[10px] uppercase tracking-wider"
+                            onClick={handleExportPDF}
+                        >
+                            <FileJson className="h-3.5 w-3.5 mr-1" />
+                            PDF
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={exporting}
+                            className="h-10 rounded-xl text-orange-400 hover:text-orange-300 hover:bg-orange-400/10 font-bold text-[10px] uppercase tracking-wider"
+                            onClick={handleExportPPT}
+                        >
+                            <Presentation className="h-3.5 w-3.5 mr-1" />
+                            PPT
+                        </Button>
+                        <div className="w-[1px] h-6 bg-slate-800" />
+                        <Button
+                            variant="ghost"
+                            size="sm"
                             className="h-10 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 font-bold text-xs uppercase tracking-wider"
                             onClick={handleRefresh}
                             disabled={refreshing}
@@ -197,55 +263,60 @@ export default function DashboardDetailPage() {
                     <DashboardFilters
                         dashboardId={dashboard.id}
                         onFiltersChange={setActiveFilters}
+                        externalFilters={activeFilters}
                     />
                 </div>
             </div>
 
-            {/* Dashboard Summary Narrative */}
-            {summary && (
-                <div className="animate-in slide-in-from-top-4 duration-500">
-                    <div className="relative p-8 rounded-[2rem] bg-gradient-to-br from-violet-600/10 via-indigo-600/5 to-transparent border border-violet-500/20 shadow-2xl overflow-hidden group">
-                        <div className="absolute -top-12 -right-12 h-48 w-48 bg-violet-600/20 blur-[80px] rounded-full animate-pulse" />
+            {/* Dashboard Visual Content for Export */}
+            <div id={`dashboard-content-${dashboard.id}`} className="space-y-8 p-4 bg-slate-950 rounded-[2rem]">
+                {/* Dashboard Summary Narrative */}
+                {summary && (
+                    <div className="animate-in slide-in-from-top-4 duration-500">
+                        <div className="relative p-8 rounded-[2rem] bg-gradient-to-br from-violet-600/10 via-indigo-600/5 to-transparent border border-violet-500/20 shadow-2xl overflow-hidden group">
+                            <div className="absolute -top-12 -right-12 h-48 w-48 bg-violet-600/20 blur-[80px] rounded-full animate-pulse" />
 
-                        <div className="relative z-10 space-y-4">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="h-10 w-10 rounded-xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center">
-                                        <BookOpen className="h-5 w-5 text-violet-400" />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-lg font-black text-white tracking-tight leading-tight">Executive Intelligence Report</h3>
-                                        <div className="flex items-center gap-2">
-                                            <span className="flex h-1.5 w-1.5 rounded-full bg-violet-500 animate-ping" />
-                                            <span className="text-[10px] text-violet-400/80 font-bold uppercase tracking-[0.2em]">Live Synthesis</span>
+                            <div className="relative z-10 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-10 w-10 rounded-xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center">
+                                            <BookOpen className="h-5 w-5 text-violet-400" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-lg font-black text-white tracking-tight leading-tight">Executive Intelligence Report</h3>
+                                            <div className="flex items-center gap-2">
+                                                <span className="flex h-1.5 w-1.5 rounded-full bg-violet-500 animate-ping" />
+                                                <span className="text-[10px] text-violet-400/80 font-bold uppercase tracking-[0.2em]">Live Synthesis</span>
+                                            </div>
                                         </div>
                                     </div>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 rounded-full text-slate-500 hover:text-white hover:bg-white/10"
+                                        onClick={() => setSummary(null)}
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </Button>
                                 </div>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 rounded-full text-slate-500 hover:text-white hover:bg-white/10"
-                                    onClick={() => setSummary(null)}
-                                >
-                                    <X className="h-4 w-4" />
-                                </Button>
-                            </div>
 
-                            <p className="text-base md:text-lg text-slate-300 leading-relaxed font-medium pl-1 tracking-tight">
-                                {summary}
-                            </p>
+                                <p className="text-base md:text-lg text-slate-300 leading-relaxed font-medium pl-1 tracking-tight">
+                                    {summary}
+                                </p>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
 
-            {/* Main Visualizations Grid */}
-            <div className="space-y-6">
-                <DashboardGrid
-                    panels={dashboard.panels}
-                    onRemovePanel={handleRemovePanel}
-                    activeFilters={activeFilters}
-                />
+                {/* Main Visualizations Grid */}
+                <div className="space-y-6">
+                    <DashboardGrid
+                        panels={dashboard.panels}
+                        onRemovePanel={handleRemovePanel}
+                        activeFilters={activeFilters}
+                        onChartInteraction={handleChartInteraction}
+                    />
+                </div>
             </div>
 
             {/* System Status Footer */}

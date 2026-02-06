@@ -9,6 +9,7 @@ from app.db.models import DataSource, SavedQuery, ScheduledReport
 from app.services.encryption import decrypt_connection_string
 from app.services.notifications.email_service import SMTPEmailProvider
 from app.services.query_executor import QueryExecutor
+from app.services.notification_integrations import SlackWebhookClient, TeamsWebhookClient
 
 logger = logging.getLogger(__name__)
 
@@ -114,13 +115,35 @@ class ReportScheduler:
                 return
 
             # 4. Deliver Report
-            success = await self.email_provider.send_report(
-                recipients=report.recipient_emails,
-                report_name=report.name,
-                query_text=saved_query.natural_language_query,
-                results=results,
-                chart_type=saved_query.chart_type
-            )
+            success = False
+            if report.channel_type == "email" or not report.channel_type:
+                success = await self.email_provider.send_report(
+                    recipients=report.recipient_emails,
+                    report_name=report.name,
+                    query_text=saved_query.natural_language_query,
+                    results=results,
+                    chart_type=saved_query.chart_type
+                )
+            elif report.channel_type == "slack":
+                if report.channel_webhook:
+                    summary_text = f"Analyzed {len(results)} records from {data_source.name}."
+                    success = await SlackWebhookClient.send_message(
+                        webhook_url=report.channel_webhook,
+                        text=f"*Scheduled Report:* {report.name}\n_Query: {saved_query.natural_language_query}_",
+                        title=f"QueryLite Insight: {report.name}",
+                        data_summary=summary_text
+                    )
+                else:
+                    logger.error(f"Slack webhook missing for report {report_id}")
+            elif report.channel_type == "teams":
+                if report.channel_webhook:
+                    success = await TeamsWebhookClient.send_message(
+                        webhook_url=report.channel_webhook,
+                        text=f"The scheduled report '{report.name}' has been executed. It captured {len(results)} rows based on your inquiry: '{saved_query.natural_language_query}'.",
+                        title=f"QueryLite Report: {report.name}"
+                    )
+                else:
+                    logger.error(f"Teams webhook missing for report {report_id}")
 
             if success:
                 # 5. Update last run timestamp

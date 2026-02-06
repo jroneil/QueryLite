@@ -16,6 +16,8 @@ import {
     MessageSquare,
     Sparkles,
     LayoutDashboard,
+    ThumbsUp,
+    ThumbsDown,
 } from "lucide-react";
 import { ChatThread } from "@/components/chat/ChatThread";
 import { ThreadSidebar } from "@/components/chat/ThreadSidebar";
@@ -57,6 +59,7 @@ interface QueryResponse {
     row_count: number;
     chart_recommendation: ChartRecommendation;
     execution_time_ms: number;
+    audit_log_id?: string;
 }
 
 export default function AskPage() {
@@ -87,6 +90,7 @@ function AskPageContent() {
     const [saveSuccess, setSaveSuccess] = useState(false);
     const [isChatMode, setIsChatMode] = useState(false);
     const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
+    const [feedbackSent, setFeedbackSent] = useState<boolean>(false);
 
     // Initial load of parameters from URL
     useEffect(() => {
@@ -155,6 +159,7 @@ function AskPageContent() {
         setError(null);
         setResult(null);
         setSaveSuccess(false);
+        setFeedbackSent(false);
 
         const loadingToast = toast.loading("Thinking...");
 
@@ -216,6 +221,23 @@ function AskPageContent() {
         if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
             e.preventDefault();
             handleSubmit();
+        }
+    };
+
+    const handleFeedback = async (score: number) => {
+        if (!result?.audit_log_id) return;
+
+        try {
+            const response = await authenticatedFetch(`/api/query/${result.audit_log_id}/feedback`, {
+                method: "POST",
+                body: JSON.stringify({ score }),
+            });
+            if (response.ok) {
+                setFeedbackSent(true);
+                toast.success("Feedback recorded! Thanks for helping us improve.");
+            }
+        } catch (err) {
+            console.error("Feedback failed:", err);
         }
     };
 
@@ -551,7 +573,33 @@ function AskPageContent() {
                                             <div className="h-10 w-10 rounded-xl bg-slate-600/10 border border-slate-500/20 flex items-center justify-center">
                                                 <Code className="h-5 w-5 text-slate-400" />
                                             </div>
-                                            <CardTitle className="text-white text-lg">Query Protocol</CardTitle>
+                                            <div>
+                                                <CardTitle className="text-white text-lg">Query Protocol</CardTitle>
+                                                {!feedbackSent && result.audit_log_id && (
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Helpful?</span>
+                                                        <button
+                                                            onClick={() => handleFeedback(1)}
+                                                            className="text-slate-500 hover:text-emerald-400 p-1 rounded-md hover:bg-emerald-500/10 transition-colors"
+                                                            title="Accurate SQL"
+                                                        >
+                                                            <ThumbsUp className="h-3 w-3" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleFeedback(-1)}
+                                                            className="text-slate-500 hover:text-rose-400 p-1 rounded-md hover:bg-rose-500/10 transition-colors"
+                                                            title="Inaccurate or logic error"
+                                                        >
+                                                            <ThumbsDown className="h-3 w-3" />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                                {feedbackSent && (
+                                                    <Badge variant="outline" className="mt-1 bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[9px] uppercase font-black px-1.5 py-0">
+                                                        Feedback Recorded
+                                                    </Badge>
+                                                )}
+                                            </div>
                                         </div>
                                         <div className="flex items-center gap-3">
                                             <div className="text-[10px] text-slate-500 font-mono tracking-widest uppercase">

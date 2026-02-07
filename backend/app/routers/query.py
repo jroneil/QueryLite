@@ -266,6 +266,14 @@ async def execute_natural_language_query(
         settings = get_settings()
         results = PIIMasker.mask_results(results, enabled=settings.enable_pii_masking)
         
+        # Phase 10: Apply Column-Level Permission Masking
+        if data_source.workspace_id:
+            user_role = RBACService.get_user_role(db, current_user.id, data_source.workspace_id)
+            if user_role:
+                masked_columns = RBACService.get_masked_columns(db, user_role, data_source.id)
+                if masked_columns:
+                    results = RBACService.apply_column_masking(results, masked_columns)
+        
         chart_recommendation = executor.recommend_chart_type(results)
         
         # Save to query history

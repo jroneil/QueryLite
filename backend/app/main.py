@@ -25,6 +25,9 @@ from app.routers import (
     forecasts,
     sso,
     suggestions,
+    data_lineage,
+    gdpr,
+    column_permissions,
 )
 from app.services.auth_service import get_password_hash
 from app.services.scheduler_service import scheduler_service
@@ -112,6 +115,9 @@ app.include_router(alerts.router, prefix="/api/alerts", tags=["Alerts"])
 app.include_router(forecasts.router, prefix="/api/forecasts", tags=["Forecasts"])
 app.include_router(sso.router, prefix="/api", tags=["SSO"])
 app.include_router(suggestions.router, prefix="/api/suggestions", tags=["Suggestions"])
+app.include_router(data_lineage.router, prefix="/api", tags=["Data Lineage"])
+app.include_router(gdpr.router, prefix="/api", tags=["GDPR Compliance"])
+app.include_router(column_permissions.router, prefix="/api", tags=["Column Permissions"])
 
 
 @app.get("/health")

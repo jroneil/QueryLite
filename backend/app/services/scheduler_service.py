@@ -5,7 +5,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from app.db.database import SessionLocal
-from app.db.models import DataSource, SavedQuery, ScheduledReport, AlertRule, DataAnomalyAlert
+from app.db.models import DataSource, SavedQuery, ScheduledReport, AlertRule, DataAnomalyAlert, WorkspaceTheme
 from app.services.encryption import decrypt_connection_string
 from app.services.notifications.email_service import SMTPEmailProvider
 from app.services.query_executor import QueryExecutor
@@ -124,7 +124,19 @@ class ReportScheduler:
                 logger.error(f"SQL Execution failed for report {report_id}: {e}")
                 return
 
-            # 4. Deliver Report
+            # 4. Fetch Workspace Theme
+            theme_dict = None
+            if data_source.workspace_id:
+                theme = db.query(WorkspaceTheme).filter(WorkspaceTheme.workspace_id == data_source.workspace_id).first()
+                if theme:
+                    theme_dict = {
+                        "primary_color": theme.primary_color,
+                        "secondary_color": theme.secondary_color,
+                        "logo_url": theme.logo_url,
+                        "dark_mode": theme.dark_mode
+                    }
+
+            # 5. Deliver Report
             success = False
             if report.channel_type == "email" or not report.channel_type:
                 success = await self.email_provider.send_report(
@@ -132,7 +144,8 @@ class ReportScheduler:
                     report_name=report.name,
                     query_text=saved_query.natural_language_query,
                     results=results,
-                    chart_type=saved_query.chart_type
+                    chart_type=saved_query.chart_type,
+                    theme=theme_dict
                 )
             elif report.channel_type == "slack":
                 if report.channel_webhook:

@@ -41,16 +41,16 @@ interface TestResult {
 
 import { authenticatedFetch } from "@/lib/api";
 import { useSession } from "next-auth/react";
+import { useWorkspaces } from "@/components/workspace-context";
 
 export default function DataSourcesPage() {
+    const { workspaces: userWorkspaces, activeWorkspaceId: selectedWorkspaceId, setActiveWorkspaceId } = useWorkspaces();
     const [dataSources, setDataSources] = useState<DataSource[]>([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
     const [formLoading, setFormLoading] = useState(false);
     const [testResults, setTestResults] = useState<Record<string, TestResult>>({});
     const [testingId, setTestingId] = useState<string | null>(null);
-    const [userWorkspaces, setUserWorkspaces] = useState<Workspace[]>([]);
-    const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
 
     // Form state
     const [name, setName] = useState("");
@@ -79,23 +79,9 @@ export default function DataSourcesPage() {
 
     const canEdit = currentRole === "admin" || currentRole === "editor";
 
-    // Fetch data and workspaces on mount
     useEffect(() => {
         fetchDataSources();
-        fetchWorkspaces();
-    }, []);
-
-    const fetchWorkspaces = async () => {
-        try {
-            const response = await authenticatedFetch("/api/workspaces/");
-            if (response.ok) {
-                const data = await response.json();
-                setUserWorkspaces(data);
-            }
-        } catch (error) {
-            console.error("Failed to fetch workspaces:", error);
-        }
-    };
+    }, [selectedWorkspaceId]);
 
     const fetchDataSources = async () => {
         try {
@@ -221,7 +207,8 @@ export default function DataSourcesPage() {
                             <span className="px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Context</span>
                             <select
                                 className="bg-transparent text-white text-xs font-bold border-none focus:ring-0 cursor-pointer pr-8"
-                                onChange={(e) => setSelectedWorkspaceId(e.target.value || null)}
+                                value={selectedWorkspaceId || ""}
+                                onChange={(e) => setActiveWorkspaceId(e.target.value || null)}
                             >
                                 <option value="">Personal</option>
                                 {userWorkspaces.map(ws => (

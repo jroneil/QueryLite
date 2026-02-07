@@ -9,15 +9,13 @@ This is not a hosted service.
 
 > **Turn natural language into insights.** Connect your PostgreSQL database and ask questions in plain English—QueryLite generates the SQL, runs it, and visualizes the results automatically.
 
-## What It Does
-
-QueryLite is a Micro-SaaS MVP that bridges the gap between your data and actionable insights:
-
-1. **Connect** — Securely link your PostgreSQL databases (connection strings are encrypted at rest)
-2. **Ask** — Type questions like *"Show me monthly revenue trends"* or *"Top 10 customers by order count"*
-3. **Visualize** — The AI generates a SQL query, executes it, and auto-selects the best chart (Bar, Line, or Donut) based on your data structure
-
 No SQL knowledge required. Just ask, and see your data come to life.
+
+## 🛡️ Security Scanning
+QueryLite includes automated security scanning (Bandit, Semgrep, Gitleaks) to ensure a baseline security posture.
+- Run `.\scripts\setup_scan_env.ps1` to initialize tools.
+- Run `.\scripts\scan.ps1` to execute a full scan.
+- See [Security Scanning Documentation](docs/security_scanning.md) for details and troubleshooting.
 
 ## 🚀 Roadmap
 
@@ -103,8 +101,14 @@ No SQL knowledge required. Just ask, and see your data come to life.
 - **Semantic Search**: Vector embeddings (pgvector) for schema filtering to improve LLM accuracy on massive databases. ✅
 - **Query Suggestions**: Real-time natural language autocomplete based on successful query patterns. ✅
 - **Self-Healing Queries**: Automated error correction; retries failed queries with LLM-suggested fixes. ✅
-- **Saved Queries**: Bookmark favorite insights for quick access.
-- **Export**: Export data to CSV.
+- **Saved Queries**: Bookmark favorite insights for quick access. ✅
+- **Export**: Export data to CSV. ✅
+
+### Phase 9: White-Labeling & Multi-Tenancy (Completed ✅)
+- **Multi-Tenancy**: Isolated workspaces for different teams or clients with RBAC. ✅
+- **Custom Branding**: Per-workspace theming (colors, logos, dark mode). ✅
+- **Organization Admin Console**: Centralized usage metrics and member management. ✅
+- **Branded Reports**: Scheduled emails and webhooks customized with tenant branding. ✅
 
 ---
 

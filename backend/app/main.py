@@ -31,8 +31,17 @@ from app.services.scheduler_service import scheduler_service
 from app.middleware.error_handler import error_handler_middleware
 from app.middleware.rate_limiter import rate_limit_middleware
 
-# Create database tables
-db_models.Base.metadata.create_all(bind=engine)
+from sqlalchemy import text
+
+# Enable pgvector extension and create database tables
+def init_db():
+    with engine.begin() as conn:
+        # Check if we are on postgres before trying to create extension
+        if engine.dialect.name == "postgresql":
+            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+    db_models.Base.metadata.create_all(bind=engine)
+
+init_db()
 
 
 def seed_dummy_user():

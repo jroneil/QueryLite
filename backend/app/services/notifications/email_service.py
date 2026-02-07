@@ -19,32 +19,35 @@ class SMTPEmailProvider(BaseNotificationProvider):
                           report_name: str, 
                           query_text: str, 
                           results: List[dict[str, Any]],
-                          chart_type: Optional[str] = None) -> bool:
+                          chart_type: Optional[str] = None,
+                          theme: Optional[dict[str, Any]] = None) -> bool:
         settings = get_settings()
+        
+        primary_color = theme.get("primary_color", "#6366f1") if theme else "#6366f1"
+        logo_url = theme.get("logo_url") if theme else None
         
         if not settings.smtp_host:
             print(f"SMTP not configured, would have sent to: {recipients}")
-            # In dev mode, we just log it
             return True
 
-        # Create message
         msg = MIMEMultipart()
         msg['Subject'] = f"QueryLite Report: {report_name}"
         msg['From'] = settings.smtp_from
         msg['To'] = ", ".join(recipients)
 
-        # Create basic HTML Body
+        logo_html = f'<img src="{logo_url}" height="32" style="margin-bottom: 5px;">' if logo_url else '<h1 style="color: white; margin: 0;">QueryLite</h1>'
+
         html = f"""
         <html>
             <body style="font-family: sans-serif; color: #333; line-height: 1.6;">
                 <div style="max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-                    <div style="background-color: #6366f1; padding: 20px; text-align: center;">
-                        <h1 style="color: white; margin: 0;">QueryLite</h1>
+                    <div style="background-color: {primary_color}; padding: 20px; text-align: center;">
+                        {logo_html}
                     </div>
                     <div style="padding: 20px;">
                         <h2 style="color: #1e293b;">Automated Report: {report_name}</h2>
                         <p>Your scheduled query was executed successfully.</p>
-                        <div style="background-color: #f8fafc; padding: 15px; border-radius: 6px; border-left: 4px solid #6366f1; font-family: monospace;">
+                        <div style="background-color: #f8fafc; padding: 15px; border-radius: 6px; border-left: 4px solid {primary_color}; font-family: monospace;">
                             {query_text}
                         </div>
                         <p style="margin-top: 20px;"><strong>Results:</strong> {len(results)} rows found.</p>

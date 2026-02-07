@@ -63,6 +63,23 @@ class Workspace(Base):
 
     members = relationship("WorkspaceMember", back_populates="workspace", cascade="all, delete-orphan")
     data_sources = relationship("DataSource", back_populates="workspace", cascade="all, delete-orphan")
+    theme = relationship("WorkspaceTheme", back_populates="workspace", cascade="all, delete-orphan", uselist=False)
+
+
+class WorkspaceTheme(Base):
+    """Model for workspace-level branding and themes"""
+    __tablename__ = "workspace_themes"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), unique=True, nullable=False)
+    primary_color = Column(String(7), default="#7c3aed")  # Hex color
+    secondary_color = Column(String(7), default="#4f46e5")
+    logo_url = Column(String(512), nullable=True)
+    dark_mode = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    workspace = relationship("Workspace", back_populates="theme")
 
 
 class WorkspaceMember(Base):

@@ -1,0 +1,5 @@
+bandit==1.9.3
+# semgrep==1.107.0 (Removed: Semgrep does not support native Windows. Use Docker fallback.)
+tomli==2.2.1
+# tomli is pinning to ensure compatibility on older pythons if needed, 
+# although semgrep brings its own dependencies.

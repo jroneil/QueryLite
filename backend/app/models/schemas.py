@@ -208,6 +208,29 @@ class SchemaInfo(BaseModel):
     tables: List[dict[str, Any]]
 
 
+class WorkspaceThemeBase(BaseModel):
+    primary_color: str = Field("#7c3aed", pattern="^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$")
+    secondary_color: str = Field("#4f46e5", pattern="^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$")
+    logo_url: Optional[str] = None
+    dark_mode: bool = True
+
+class WorkspaceThemeCreate(WorkspaceThemeBase):
+    pass
+
+class WorkspaceThemeResponse(WorkspaceThemeBase):
+    id: UUID
+    workspace_id: UUID
+
+    class Config:
+        from_attributes = True
+
+class AdminMetrics(BaseModel):
+    total_queries: int
+    active_data_sources: int
+    member_count: int
+    role_distribution: dict[str, int]
+    storage_usage_bytes: int = 0
+
 class WorkspaceCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     description: Optional[str] = None
@@ -239,6 +262,7 @@ class WorkspaceResponse(BaseModel):
     webhook_enabled: bool = False
     created_at: datetime
     members: List[WorkspaceMemberResponse] = []
+    theme: Optional[WorkspaceThemeResponse] = None
 
     class Config:
         from_attributes = True

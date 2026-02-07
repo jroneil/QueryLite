@@ -9,12 +9,15 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.db.models import User, Workspace, WorkspaceMember
+from app.db.models import User, Workspace, WorkspaceMember, QueryHistory, DataSource, WorkspaceTheme
 from app.models.schemas import (
+    AdminMetrics,
     WebhookUpdate,
     WorkspaceCreate,
     WorkspaceMemberResponse,
     WorkspaceResponse,
+    WorkspaceThemeCreate,
+    WorkspaceThemeResponse,
 )
 from app.routers.auth_deps import get_current_user
 from app.services.rbac import RBACService
@@ -163,3 +166,80 @@ async def update_webhook(
     db.refresh(workspace)
     
     return workspace
+@router.get("/{workspace_id}/admin", response_model=AdminMetrics)
+async def get_workspace_admin_metrics(
+    workspace_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get workspace usage metrics (Admin only)"""
+    RBACService.check_permission(db, current_user.id, workspace_id, required_role="admin")
+    
+    # 1. Total Queries
+    total_queries = db.query(QueryHistory).join(DataSource).filter(
+        DataSource.workspace_id == workspace_id
+    ).count()
+    
+    # 2. Active Data Sources
+    active_sources = db.query(DataSource).filter(
+        DataSource.workspace_id == workspace_id
+    ).count()
+    
+    # 3. Members & Roles
+    members = db.query(WorkspaceMember).filter(
+        WorkspaceMember.workspace_id == workspace_id
+    ).all()
+    member_count = len(members)
+    
+    role_dist = {}
+    for m in members:
+        role_dist[m.role] = role_dist.get(m.role, 0) + 1
+        
+    return AdminMetrics(
+        total_queries=total_queries,
+        active_data_sources=active_sources,
+        member_count=member_count,
+        role_distribution=role_dist
+    )
+
+@router.get("/{workspace_id}/theme", response_model=WorkspaceThemeResponse)
+async def get_workspace_theme(
+    workspace_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get workspace branding/theme settings"""
+    # Any member can see the theme
+    RBACService.check_permission(db, current_user.id, workspace_id, required_role="viewer")
+    
+    theme = db.query(WorkspaceTheme).filter(WorkspaceTheme.workspace_id == workspace_id).first()
+    if not theme:
+        # Create default theme if missing
+        theme = WorkspaceTheme(workspace_id=workspace_id)
+        db.add(theme)
+        db.commit()
+        db.refresh(theme)
+        
+    return theme
+
+@router.put("/{workspace_id}/theme", response_model=WorkspaceThemeResponse)
+async def update_workspace_theme(
+    workspace_id: UUID,
+    theme_data: WorkspaceThemeCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Update workspace branding settings (Admin only)"""
+    RBACService.check_permission(db, current_user.id, workspace_id, required_role="admin")
+    
+    theme = db.query(WorkspaceTheme).filter(WorkspaceTheme.workspace_id == workspace_id).first()
+    if not theme:
+        theme = WorkspaceTheme(workspace_id=workspace_id)
+        db.add(theme)
+    
+    for key, value in theme_data.dict(exclude_unset=True).items():
+        setattr(theme, key, value)
+        
+    db.commit()
+    db.refresh(theme)
+    return theme

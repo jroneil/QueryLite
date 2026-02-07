@@ -97,6 +97,26 @@ Verify that all services are healthy:
 
 ---
 
+### 3.7 White-Labeling & Branded Themes
+1. **Workspace Selection**: In the Sidebar, use the Workspace Switcher to select `"Marketing Team"`.
+2. **Access Admin Console**: Click the **"Admin Console"** link in the sidebar (appearing only when a workspace is active).
+3. **Customize Branding**:
+   - Navigate to the **"Branded Theme"** tab.
+   - Change **Primary Accent Color** to a custom hex (e.g., `#ef4444` for red).
+   - Change **Secondary Color** (e.g., `#1e293b`).
+   - Enter a **Logo URL** (use a valid image URL).
+   - Toggle **Dark Mode** preference.
+   - Click **"Preserve Branding"**.
+4. **Verification (Global UI)**:
+   - Notice the Sidebar accent and active navigation items now use your new primary color.
+   - Check the **Dashboard**; buttons and gradient backgrounds should reflect your branding.
+5. **Verification (Branded Reports)**:
+   - Wait for your scheduled report (from step 3.5).
+   - Open **MailHog**.
+   - **Expected**: The email should now feature your custom logo and the primary accent color you selected in the Admin Console.
+
+---
+
 ## 🧠 4. Advanced AI Feature Verification
 
 ### 4.1 AI Forecaster

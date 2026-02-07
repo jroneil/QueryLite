@@ -11,6 +11,7 @@ class BaseNotificationProvider(ABC):
                           report_name: str, 
                           query_text: str, 
                           results: List[dict[str, Any]],
-                          chart_type: Optional[str] = None) -> bool:
+                          chart_type: Optional[str] = None,
+                          theme: Optional[dict[str, Any]] = None) -> bool:
         """Send a formatted query report"""
         pass

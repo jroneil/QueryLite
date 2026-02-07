@@ -1,0 +1,12 @@
+# .semgrepignore
+# Exclude non-source directories from security scanning
+.venv/
+venv/
+__pycache__/
+node_modules/
+.next/
+dist/
+build/
+reports/
+.git/
+.venv-scan/

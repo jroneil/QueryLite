@@ -1,3 +1,4 @@
 [bandit]
 # Skip B101 (assert_used) - asserts are expected in test files and pytest uses them
 skips = B101
+exclude_dirs = .venv,venv,tests,__pycache__

@@ -185,6 +185,8 @@ class QueryResponse(BaseModel):
     job_id: Optional[str] = None # Added for Phase 7.1
     status: str = "completed" # completed, processing, failed
     is_cached: bool = False # Flag for performance telemetry
+    is_healed: bool = False # Flag for Phase 8.3
+    original_error: Optional[str] = None # Original error before healing
 
 
 class FeedbackSubmission(BaseModel):

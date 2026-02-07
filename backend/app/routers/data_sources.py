@@ -5,7 +5,7 @@ Data Sources router - CRUD operations for database connections
 from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
@@ -19,6 +19,7 @@ from app.routers.auth_deps import get_current_user
 from app.services.encryption import decrypt_connection_string, encrypt_connection_string
 from app.services.query_executor import QueryExecutor
 from app.services.rbac import RBACService
+from app.services.schema_embedder import schema_embedder
 
 router = APIRouter()
 
@@ -26,6 +27,7 @@ router = APIRouter()
 @router.post("/", response_model=DataSourceResponse)
 async def create_data_source(
     data_source: DataSourceCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -52,6 +54,9 @@ async def create_data_source(
     db.add(db_data_source)
     db.commit()
     db.refresh(db_data_source)
+    
+    # Trigger asynchrous embedding generation
+    background_tasks.add_task(schema_embedder.embed_data_source_schema, db_data_source.id)
     
     return db_data_source
 
@@ -125,6 +130,7 @@ async def delete_data_source(
 @router.post("/{data_source_id}/test", response_model=DataSourceTestResult)
 async def test_data_source_connection(
     data_source_id: UUID,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -144,6 +150,10 @@ async def test_data_source_connection(
         success, message, tables = executor.test_connection()
         executor.close()
         
+        if success:
+            # Trigger embedding update on successful test
+            background_tasks.add_task(schema_embedder.embed_data_source_schema, data_source.id)
+
         return DataSourceTestResult(
             success=success,
             message=message,

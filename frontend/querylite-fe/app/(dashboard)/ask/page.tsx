@@ -86,6 +86,8 @@ interface QueryResponse {
     job_id?: string;
     status: "completed" | "processing" | "failed";
     is_cached?: boolean;
+    is_healed?: boolean;
+    original_error?: string;
 }
 
 export default function AskPage() {
@@ -131,6 +133,10 @@ function AskPageContent() {
     // Forecasting States
     const [isForecasting, setIsForecasting] = useState(false);
     const [forecastData, setForecastData] = useState<{ index: number; value: number }[] | null>(null);
+
+    // Suggestions States
+    const [suggestions, setSuggestions] = useState<string[]>([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
 
     // Initial load of parameters from URL
     useEffect(() => {
@@ -188,6 +194,26 @@ function AskPageContent() {
             }
         } catch (error) {
             setLlmConfigured(false);
+        }
+    };
+
+    const handleAutocomplete = async (val: string) => {
+        setQuestion(val);
+        if (val.length < 3) {
+            setSuggestions([]);
+            setShowSuggestions(false);
+            return;
+        }
+
+        try {
+            const res = await authenticatedFetch(`/api/suggestions/autocomplete?q=${encodeURIComponent(val)}`);
+            if (res.ok) {
+                const data = await res.json();
+                setSuggestions(data);
+                setShowSuggestions(data.length > 0);
+            }
+        } catch (error) {
+            console.error("Autocomplete fetch failed:", error);
         }
     };
 
@@ -596,13 +622,31 @@ function AskPageContent() {
                                             <Textarea
                                                 id="question"
                                                 value={question}
-                                                onChange={(e) => setQuestion(e.target.value)}
+                                                onChange={(e) => handleAutocomplete(e.target.value)}
                                                 onKeyDown={handleKeyDown}
+                                                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                                                 placeholder="What would you like to discover today?"
                                                 rows={4}
                                                 className="w-full bg-slate-950/50 border-slate-800 rounded-3xl text-lg text-white placeholder:text-slate-600 focus:ring-4 focus:ring-violet-500/10 focus:border-violet-500/50 p-6 shadow-inner transition-all resize-none"
                                             />
-                                            <div className="absolute bottom-4 right-4 text-[10px] text-slate-700 font-mono tracking-tighter opacity-0 group-hover:opacity-100 transition-opacity">
+                                            {showSuggestions && (
+                                                <div className="absolute z-50 top-full left-0 right-0 mt-2 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2">
+                                                    {suggestions.map((s, idx) => (
+                                                        <button
+                                                            key={idx}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setQuestion(s);
+                                                                setShowSuggestions(false);
+                                                            }}
+                                                            className="w-full text-left px-6 py-3 text-sm text-slate-300 hover:bg-violet-600/20 hover:text-white transition-colors border-b border-slate-800/50 last:border-0"
+                                                        >
+                                                            {s}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            <div className="absolute bottom-4 right-4 text-[10px] text-slate-700 font-mono tracking-tighter opacity-0 group-hover:opacity-100 transition-opacity uppercase font-bold">
                                                 CMD + ENTER TO EXECUTE
                                             </div>
                                         </div>
@@ -651,6 +695,21 @@ function AskPageContent() {
                         {/* Result Presentation */}
                         {result && (
                             <div className="space-y-8 animate-in slide-in-from-bottom-5 duration-700">
+                                {/* Self-Healing Banner */}
+                                {result.is_healed && (
+                                    <div className="p-4 rounded-3xl bg-emerald-500/5 border border-emerald-500/20 flex items-center gap-4 animate-in slide-in-from-top-4">
+                                        <div className="h-10 w-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                                            <Sparkles className="h-5 w-5 text-emerald-400" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-emerald-400 font-black text-xs tracking-tight uppercase">Self-Healed Query</h4>
+                                            <p className="text-emerald-400/80 text-[11px] leading-relaxed">
+                                                This query hit a database error but was automatically corrected by the AI.
+                                                <span className="ml-2 italic opacity-60">Original Error: {result.original_error}</span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
                                 {/* Insight Visualization */}
                                 <Card className="bg-slate-900/40 backdrop-blur-xl border-slate-800/50 shadow-2xl rounded-3xl overflow-hidden group">
                                     <CardHeader className="border-b border-slate-800/50 bg-slate-900/20 p-6 flex flex-row items-center justify-between">

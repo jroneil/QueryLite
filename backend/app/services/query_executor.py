@@ -18,17 +18,20 @@ from app.services.schema_cache import schema_cache
 
 from app.services.connectors.sql import SqlConnector
 from app.services.connectors.mongodb import MongoConnector
+from app.services.connectors.bigquery import BigQueryConnector
+from app.services.connectors.snowflake import SnowflakeConnector
 from app.services.connectors.base import BaseConnector
 
 class QueryExecutor:
     """Service for executing queries across multiple database types"""
     
     def __init__(self, connection_string: Optional[str] = None, data_source_id: Optional[str] = None, 
-                 ds_type: str = "postgresql", file_path: Optional[str] = None):
+                 ds_type: str = "postgresql", file_path: Optional[str] = None, config: Optional[dict] = None):
         settings = get_settings()
         self.data_source_id = data_source_id
         self.ds_type = ds_type
         self.timeout = settings.query_timeout_seconds
+        self.config = config or {}
         
         # Factory: Choose appropriate connector
         if ds_type in ["postgresql", "mysql", "duckdb"]:
@@ -44,6 +47,26 @@ class QueryExecutor:
             self.connector: BaseConnector = MongoConnector(
                 connection_string=connection_string,
                 settings=settings
+            )
+        elif ds_type == "bigquery":
+            # Config should contain service_account_json
+            creds = self.config.get("service_account_json")
+            if not creds:
+                raise ConnectionError("BigQuery requires service_account_json in config")
+            self.connector: BaseConnector = BigQueryConnector(
+                credentials_json=creds,
+                project_id=self.config.get("project_id")
+            )
+        elif ds_type == "snowflake":
+            # Config contains all snowflake params
+            self.connector: BaseConnector = SnowflakeConnector(
+                account=self.config.get("account"),
+                user=self.config.get("user"),
+                password=self.config.get("password"),
+                warehouse=self.config.get("warehouse"),
+                database=self.config.get("database"),
+                schema=self.config.get("schema", "PUBLIC"),
+                role=self.config.get("role")
             )
         else:
             raise ValueError(f"Unsupported data source type: {ds_type}")

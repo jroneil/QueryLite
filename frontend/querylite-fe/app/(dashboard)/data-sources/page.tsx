@@ -57,7 +57,19 @@ export default function DataSourcesPage() {
     const [description, setDescription] = useState("");
     const [connectionString, setConnectionString] = useState("");
     const [provisionMode, setProvisionMode] = useState<"database" | "file">("database");
-    const [dbType, setDbType] = useState<"postgresql" | "mysql" | "mongodb">("postgresql");
+    const [dbType, setDbType] = useState<"postgresql" | "mysql" | "mongodb" | "bigquery" | "snowflake">("postgresql");
+
+    // Cloud Warehouse specific state
+    const [bqJson, setBqJson] = useState("");
+    const [bqProjectId, setBqProjectId] = useState("");
+
+    const [sfAccount, setSfAccount] = useState("");
+    const [sfUser, setSfUser] = useState("");
+    const [sfPassword, setSfPassword] = useState("");
+    const [sfWarehouse, setSfWarehouse] = useState("");
+    const [sfDatabase, setSfDatabase] = useState("");
+    const [sfSchema, setSfSchema] = useState("PUBLIC");
+    const [sfRole, setSfRole] = useState("");
     const { data: session } = useSession();
 
     const currentRole = session?.user?.email && selectedWorkspaceId
@@ -104,14 +116,34 @@ export default function DataSourcesPage() {
         setFormLoading(true);
 
         try {
+            const body: any = {
+                name,
+                description: description || null,
+                connection_string: connectionString,
+                type: dbType,
+                workspace_id: selectedWorkspaceId,
+            };
+
+            // Handle cloud warehouse configs
+            if (dbType === "bigquery") {
+                body.config = { service_account_json: bqJson };
+                body.connection_string = ""; // Not used for BQ
+            } else if (dbType === "snowflake") {
+                body.config = {
+                    account: sfAccount,
+                    user: sfUser,
+                    password: sfPassword,
+                    warehouse: sfWarehouse,
+                    database: sfDatabase,
+                    schema: sfSchema,
+                    role: sfRole
+                };
+                body.connection_string = ""; // Not used for Snowflake
+            }
+
             const response = await authenticatedFetch("/api/data-sources", {
                 method: "POST",
-                body: JSON.stringify({
-                    name,
-                    description: description || null,
-                    connection_string: connectionString,
-                    type: dbType,
-                }),
+                body: JSON.stringify(body),
             });
 
             if (response.ok) {
@@ -252,20 +284,22 @@ export default function DataSourcesPage() {
                                             <Label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] pl-1">
                                                 Select Engine
                                             </Label>
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                                                 {[
-                                                    { id: 'postgresql', name: 'PostgreSQL', icon: Database, color: 'text-indigo-400' },
+                                                    { id: 'postgresql', name: 'Postgres', icon: Database, color: 'text-indigo-400' },
                                                     { id: 'mysql', name: 'MySQL', icon: Database, color: 'text-blue-400' },
-                                                    { id: 'mongodb', name: 'MongoDB', icon: Database, color: 'text-emerald-400' },
+                                                    { id: 'mongodb', name: 'Mongo', icon: Database, color: 'text-emerald-400' },
+                                                    { id: 'bigquery', name: 'BigQuery', icon: Database, color: 'text-orange-400' },
+                                                    { id: 'snowflake', name: 'Snowflake', icon: Database, color: 'text-cyan-400' },
                                                 ].map((type) => (
                                                     <button
                                                         key={type.id}
                                                         type="button"
                                                         onClick={() => setDbType(type.id as any)}
-                                                        className={`flex items-center gap-3 p-4 rounded-xl border transition-all ${dbType === type.id ? 'bg-indigo-600/10 border-indigo-500/50' : 'bg-slate-950/30 border-white/5 hover:border-white/10'}`}
+                                                        className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl border transition-all ${dbType === type.id ? 'bg-indigo-600/10 border-indigo-500/50' : 'bg-slate-950/30 border-white/5 hover:border-white/10'}`}
                                                     >
                                                         <type.icon className={`h-5 w-5 ${type.color}`} />
-                                                        <span className={`text-[10px] font-black uppercase tracking-widest ${dbType === type.id ? 'text-white' : 'text-slate-500'}`}>
+                                                        <span className={`text-[9px] font-black uppercase tracking-widest ${dbType === type.id ? 'text-white' : 'text-slate-500'}`}>
                                                             {type.name}
                                                         </span>
                                                     </button>
@@ -282,7 +316,7 @@ export default function DataSourcesPage() {
                                                     id="name"
                                                     value={name}
                                                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
-                                                    placeholder="E.g. Nexus Production Master"
+                                                    placeholder="E.g. Enterprise Warehouse"
                                                     required
                                                     className="h-12 bg-slate-950/50 border-slate-800 text-white rounded-xl focus:ring-indigo-500/20 shadow-inner px-4 text-sm"
                                                 />
@@ -295,37 +329,83 @@ export default function DataSourcesPage() {
                                                     id="description"
                                                     value={description}
                                                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDescription(e.target.value)}
-                                                    placeholder="E.g. Core telemetry for user interactions..."
+                                                    placeholder="E.g. Global sales and inventory data"
                                                     className="h-12 bg-slate-950/50 border-slate-800 text-white rounded-xl focus:ring-indigo-500/20 shadow-inner px-4 text-sm"
                                                 />
                                             </div>
                                         </div>
-                                        <div className="space-y-3">
-                                            <Label htmlFor="connectionString" className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] pl-1">
-                                                Protocol Specification (Connection URL)
-                                            </Label>
-                                            <div className="relative group">
-                                                <Textarea
-                                                    id="connectionString"
-                                                    value={connectionString}
-                                                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setConnectionString(e.target.value)}
-                                                    placeholder={
-                                                        dbType === 'mongodb'
-                                                            ? "mongodb://user:password@host:27017/dbname"
-                                                            : dbType === 'mysql'
-                                                                ? "mysql://user:password@host:3306/dbname"
-                                                                : "postgresql://user:password@host:5432/dbname"
-                                                    }
-                                                    required
-                                                    className="min-h-[100px] bg-slate-950/50 border-slate-800 text-indigo-100 rounded-2xl focus:ring-indigo-500/20 shadow-inner p-6 font-mono text-sm leading-relaxed"
-                                                />
+
+                                        {dbType === 'bigquery' ? (
+                                            <div className="space-y-4">
+                                                <div className="space-y-3">
+                                                    <Label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] pl-1">
+                                                        Service Account Key (JSON)
+                                                    </Label>
+                                                    <Textarea
+                                                        value={bqJson}
+                                                        onChange={(e) => setBqJson(e.target.value)}
+                                                        placeholder='{ "type": "service_account", ... }'
+                                                        className="min-h-[200px] bg-slate-950/50 border-slate-800 text-orange-100 rounded-2xl focus:ring-orange-500/20 shadow-inner p-6 font-mono text-xs leading-relaxed"
+                                                    />
+                                                </div>
                                             </div>
-                                            <div className="flex items-center gap-2 px-1">
-                                                <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-none">
-                                                    Encryption Layer Active
-                                                </p>
+                                        ) : dbType === 'snowflake' ? (
+                                            <div className="space-y-4">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs text-slate-400 uppercase tracking-wider">Account (e.g. xy12345.us-east-1)</Label>
+                                                        <Input value={sfAccount} onChange={(e) => setSfAccount(e.target.value)} className="bg-slate-950 border-slate-800 text-sm" />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs text-slate-400 uppercase tracking-wider">Warehouse</Label>
+                                                        <Input value={sfWarehouse} onChange={(e) => setSfWarehouse(e.target.value)} className="bg-slate-950 border-slate-800 text-sm" />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs text-slate-400 uppercase tracking-wider">Database</Label>
+                                                        <Input value={sfDatabase} onChange={(e) => setSfDatabase(e.target.value)} className="bg-slate-950 border-slate-800 text-sm" />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs text-slate-400 uppercase tracking-wider">User</Label>
+                                                        <Input value={sfUser} onChange={(e) => setSfUser(e.target.value)} className="bg-slate-950 border-slate-800 text-sm" />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs text-slate-400 uppercase tracking-wider">Password</Label>
+                                                        <Input type="password" value={sfPassword} onChange={(e) => setSfPassword(e.target.value)} className="bg-slate-950 border-slate-800 text-sm" />
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs text-slate-400 uppercase tracking-wider">Schema (Optional)</Label>
+                                                        <Input value={sfSchema} onChange={(e) => setSfSchema(e.target.value)} placeholder="PUBLIC" className="bg-slate-950 border-slate-800 text-sm" />
+                                                    </div>
+                                                </div>
                                             </div>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                <Label htmlFor="connectionString" className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] pl-1">
+                                                    Protocol Specification (Connection URL)
+                                                </Label>
+                                                <div className="relative group">
+                                                    <Textarea
+                                                        id="connectionString"
+                                                        value={connectionString}
+                                                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setConnectionString(e.target.value)}
+                                                        placeholder={
+                                                            dbType === 'mongodb'
+                                                                ? "mongodb://user:password@host:27017/dbname"
+                                                                : dbType === 'mysql'
+                                                                    ? "mysql://user:password@host:3306/dbname"
+                                                                    : "postgresql://user:password@host:5432/dbname"
+                                                        }
+                                                        required
+                                                        className="min-h-[100px] bg-slate-950/50 border-slate-800 text-indigo-100 rounded-2xl focus:ring-indigo-500/20 shadow-inner p-6 font-mono text-sm leading-relaxed"
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+                                        <div className="flex items-center gap-2 px-1">
+                                            <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-none">
+                                                Encryption Layer Active
+                                            </p>
                                         </div>
                                         <div className="flex gap-4 pt-4">
                                             <Button
@@ -423,6 +503,14 @@ export default function DataSourcesPage() {
                                                 {ds.type === 'duckdb' ? (
                                                     <Badge variant="outline" className="bg-amber-500/5 text-amber-500/80 border-amber-500/20 text-[8px] uppercase font-black px-2 tracking-widest rounded-lg">
                                                         LOCAL_FILE
+                                                    </Badge>
+                                                ) : ds.type === 'bigquery' ? (
+                                                    <Badge variant="outline" className="bg-orange-500/5 text-orange-500/80 border-orange-500/20 text-[8px] uppercase font-black px-2 tracking-widest rounded-lg">
+                                                        BIGQUERY
+                                                    </Badge>
+                                                ) : ds.type === 'snowflake' ? (
+                                                    <Badge variant="outline" className="bg-cyan-500/5 text-cyan-500/80 border-cyan-500/20 text-[8px] uppercase font-black px-2 tracking-widest rounded-lg">
+                                                        SNOWFLAKE
                                                     </Badge>
                                                 ) : (
                                                     <Badge variant="outline" className={`bg-${ds.type === 'mongodb' ? 'emerald' : ds.type === 'mysql' ? 'blue' : 'indigo'}-500/5 text-${ds.type === 'mongodb' ? 'emerald' : ds.type === 'mysql' ? 'blue' : 'indigo'}-500/80 border-${ds.type === 'mongodb' ? 'emerald' : ds.type === 'mysql' ? 'blue' : 'indigo'}-500/20 text-[8px] uppercase font-black px-2 tracking-widest rounded-lg`}>

@@ -23,6 +23,7 @@ from app.routers import (
     feedback,
     alerts,
     forecasts,
+    sso,
 )
 from app.services.auth_service import get_password_hash
 from app.services.scheduler_service import scheduler_service
@@ -99,6 +100,7 @@ app.include_router(audit.router, prefix="/api", tags=["Audit"])
 app.include_router(feedback.router, prefix="/api", tags=["Feedback"])
 app.include_router(alerts.router, prefix="/api/alerts", tags=["Alerts"])
 app.include_router(forecasts.router, prefix="/api/forecasts", tags=["Forecasts"])
+app.include_router(sso.router, prefix="/api", tags=["SSO"])
 
 
 @app.get("/health")

@@ -76,11 +76,13 @@ No SQL knowledge required. Just ask, and see your data come to life.
 - **SQL Feedback Loop**: Community-driven AI refinement with thumbs up/down quality ratings.
 - **Messenger Integrations**: Deliver scheduled reports directly to Slack and Microsoft Teams.
  
- ### Phase 7.1: Enterprise Readiness (Phase 7.1 In Progress 🚀)
-- [x] Query result caching (Redis) for millisecond latency on recurring peaks ✅
-- [x] Background execution for long-running analytical pivots ✅
-- [x] Performance Telemetry: Real-time cache and execution timing indicators ✅
-- [ ] Native support for BigQuery & Snowflake enterprise warehouses
+ ### Phase 7.1: Enterprise Readiness (Completed ✅)
+- **BigQuery & Snowflake**: Native support for enterprise cloud warehouses with optimized introspection. ✅
+- **Enterprise SSO (OIDC)**: Single Sign-On with Okta and Azure AD (Entra ID) support. ✅
+- **Domain Discovery**: Zero-config SSO discovery based on user email domains. ✅
+- **Result Caching**: Redis-backed query result caching for millisecond latency on recurring peaks. ✅
+- **Background Jobs**: Asynchronous execution for long-running analytical pivots. ✅
+- **Performance Telemetry**: Real-time cache and execution timing indicators. ✅
 
 ### Phase 7.2: Proactive Intelligence (Completed ✅)
 - **Anomaly Detection**: AI-driven scanning for unexpected spikes or drops ✅
@@ -98,7 +100,7 @@ No SQL knowledge required. Just ask, and see your data come to life.
 
 - **Frontend**: Next.js 15+ (App Router), Tailwind CSS 4, shadcn/ui, Tremor
 - **Backend**: Python FastAPI (Async)
-- **Database Support**: PostgreSQL, MySQL, DuckDB, MongoDB
+- **Database Support**: PostgreSQL, MySQL, DuckDB, MongoDB, BigQuery, Snowflake
 - **LLM**: Multi-provider support (OpenAI, Anthropic, Ollama)
 
 ## 📂 Multi-Database Architecture
@@ -109,6 +111,8 @@ QueryLite supports a wide range of analytical sources out of the box:
 - **MySQL**: Standard SQL support via SQLAlchemy.
 - **DuckDB**: Analyze local **CSV**, **Excel**, and **Parquet** files with zero setup.
 - **MongoDB**: Infer schemas from document samples and generate MQL (JSON) queries automatically.
+- **BigQuery**: Native support for Google Cloud warehouses using Service Account JSON credentials.
+- **Snowflake**: Enterprise-grade connectivity with support for warehouses, roles, and schemas.
 
 Interested in adding another database? See our [Connector Contribution Guide](docs/CONTRIBUTING_CONNECTORS.md).
 
@@ -251,7 +255,8 @@ DATABASE_URL=postgresql://querylite:querylite_secret@localhost:5432/querylite
 
 ## Features
 
-- **Multi-Database Support**: Connect PostgreSQL, MySQL, and MongoDB.
+- **Multi-Database Support**: Connect PostgreSQL, MySQL, MongoDB, **BigQuery**, and **Snowflake**.
+- **Enterprise SSO**: Single Sign-On via OIDC (Okta, Azure AD) with email-based **auto-discovery**.
 - **Analyze Local Files**: Upload CSV/Excel/Parquet files for instant DuckDB-powered analysis.
 - **Natural Language Queries**: Ask questions like "Show monthly revenue trends" - now in SQL or MQL.
 - **Dashboard Builder**: Create and customize multi-chart dashboards for real-time monitoring

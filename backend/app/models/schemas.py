@@ -47,8 +47,9 @@ class DataSourceCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
     connection_string: Optional[str] = None
-    type: str = "postgresql" # postgresql, duckdb
+    type: str = "postgresql" # postgresql, duckdb, mongodb, bigquery, snowflake
     file_path: Optional[str] = None
+    config: Optional[dict] = None # Added for Enterprise warehouses
     workspace_id: Optional[UUID] = None
 
 
@@ -61,8 +62,36 @@ class DataSourceResponse(BaseModel):
     description: Optional[str]
     type: str
     file_path: Optional[str] = None
+    config: Optional[dict] = None # Added for Enterprise warehouses
     created_at: datetime
     updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# SSO Schemas
+class SSOConfigCreate(BaseModel):
+    """Schema for creating workspace SSO config"""
+    provider_name: str
+    issuer_url: str
+    client_id: str
+    client_secret: str
+    domain_allowlist: Optional[List[str]] = None
+    group_mapping: Optional[dict] = None
+
+
+class SSOConfigResponse(BaseModel):
+    """Schema for SSO config response"""
+    id: UUID
+    workspace_id: UUID
+    provider_name: str
+    issuer_url: str
+    client_id: str
+    domain_allowlist: Optional[List[str]] = None
+    group_mapping: Optional[dict] = None
+    is_active: bool
+    created_at: datetime
 
     class Config:
         from_attributes = True

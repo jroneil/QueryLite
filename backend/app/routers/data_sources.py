@@ -43,7 +43,10 @@ async def create_data_source(
         workspace_id=data_source.workspace_id,
         name=data_source.name,
         description=data_source.description,
-        connection_string_encrypted=encrypted
+        type=data_source.type,
+        connection_string_encrypted=encrypted if data_source.connection_string else None,
+        config=data_source.config,
+        file_path=data_source.file_path
     )
     
     db.add(db_data_source)
@@ -132,9 +135,11 @@ async def test_data_source_connection(
     try:
         if data_source.type == "duckdb":
             executor = QueryExecutor(ds_type="duckdb", file_path=data_source.file_path)
+        elif data_source.type in ["bigquery", "snowflake"]:
+            executor = QueryExecutor(ds_type=data_source.type, config=data_source.config)
         else:
             connection_string = decrypt_connection_string(data_source.connection_string_encrypted)
-            executor = QueryExecutor(connection_string)
+            executor = QueryExecutor(connection_string, ds_type=data_source.type, config=data_source.config)
             
         success, message, tables = executor.test_connection()
         executor.close()

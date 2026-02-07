@@ -71,25 +71,26 @@ async def execute_natural_language_query(
     )
 
     try:
+        # Simplified Factory Logic: Pass config for all types
         if data_source.type == "duckdb":
             executor = QueryExecutor(
                 ds_type="duckdb", 
                 file_path=data_source.file_path, 
                 data_source_id=str(data_source.id)
             )
-        elif data_source.type == "mongodb":
+        elif data_source.type in ["bigquery", "snowflake"]:
+            executor = QueryExecutor(
+                ds_type=data_source.type,
+                config=data_source.config,
+                data_source_id=str(data_source.id)
+            )
+        else: # postgresql, mysql, mongodb
             connection_string = decrypt_connection_string(data_source.connection_string_encrypted)
             executor = QueryExecutor(
                 connection_string,
-                ds_type="mongodb",
-                data_source_id=str(data_source.id)
-            )
-        else: # postgresql, mysql
-            connection_string = decrypt_connection_string(data_source.connection_string_encrypted)
-            executor = QueryExecutor(
-                connection_string, 
                 ds_type=data_source.type,
-                data_source_id=str(data_source.id)
+                data_source_id=str(data_source.id),
+                config=data_source.config
             )
             
         schema_info = executor.get_schema_info()

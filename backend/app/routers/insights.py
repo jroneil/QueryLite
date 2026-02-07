@@ -72,9 +72,11 @@ async def discover_query_insights(
     # Simple executor logic
     if data_source.type == "duckdb":
         executor = QueryExecutor(ds_type="duckdb", file_path=data_source.file_path, data_source_id=str(data_source.id))
+    elif data_source.type in ["bigquery", "snowflake"]:
+        executor = QueryExecutor(ds_type=data_source.type, config=data_source.config, data_source_id=str(data_source.id))
     else:
         connection_string = decrypt_connection_string(data_source.connection_string_encrypted)
-        executor = QueryExecutor(connection_string, ds_type=data_source.type, data_source_id=str(data_source.id))
+        executor = QueryExecutor(connection_string, ds_type=data_source.type, data_source_id=str(data_source.id), config=data_source.config)
         
     results = executor.execute_sql(saved_query.generated_sql)
     data = results["rows"]
@@ -114,9 +116,11 @@ async def discover_all_insights(
             
             if data_source.type == "duckdb":
                 executor = QueryExecutor(ds_type="duckdb", file_path=data_source.file_path, data_source_id=str(data_source.id))
+            elif data_source.type in ["bigquery", "snowflake"]:
+                executor = QueryExecutor(ds_type=data_source.type, config=data_source.config, data_source_id=str(data_source.id))
             else:
                 connection_string = decrypt_connection_string(data_source.connection_string_encrypted)
-                executor = QueryExecutor(connection_string, ds_type=data_source.type, data_source_id=str(data_source.id))
+                executor = QueryExecutor(connection_string, ds_type=data_source.type, data_source_id=str(data_source.id), config=data_source.config)
                 
             results = executor.execute_sql(saved_query.generated_sql)
             data = results["rows"]

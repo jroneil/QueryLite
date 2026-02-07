@@ -55,6 +55,11 @@ If your database uses a specific dialect or query language, update the LLM provi
 
 Modify the `generate_sql` method to handle your `db_type` and provide appropriate instructions to the LLM.
 
+- **Relational**: `SqlConnector` (PostgreSQL, MySQL).
+- **NoSQL**: `MongoConnector`.
+- **Warehouses**: `BigQueryConnector`, `SnowflakeConnector`.
+- **Local Files**: `DuckDBConnector`.
+
 ## Step 4: Update Frontend
 
 1. Open `frontend/querylite-fe/app/(dashboard)/data-sources/page.tsx`.

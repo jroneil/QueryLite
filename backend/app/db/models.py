@@ -95,8 +95,9 @@ class DataSource(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
-    type = Column(String(50), nullable=False, default="postgresql") # postgresql, duckdb
-    connection_string_encrypted = Column(Text, nullable=True) # Nullable for local files
+    type = Column(String(50), nullable=False, default="postgresql") # postgresql, duckdb, mongodb, bigquery, snowflake
+    connection_string_encrypted = Column(Text, nullable=True) # Nullable for local files or cloud warehouses
+    config = Column(JSON, nullable=True) # For enterprise configs (BigQuery JSON, Snowflake params)
     file_path = Column(Text, nullable=True) # Path to local CSV/Excel file
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
@@ -104,6 +105,25 @@ class DataSource(Base):
     user = relationship("User", back_populates="data_sources")
     workspace = relationship("Workspace", back_populates="data_sources")
     queries = relationship("QueryHistory", back_populates="data_source", cascade="all, delete-orphan")
+
+
+class SSOConfig(Base):
+    """Model for workspace-level OIDC configuration"""
+    __tablename__ = "sso_configs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    workspace_id = Column(UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False, unique=True)
+    provider_name = Column(String(100), nullable=False) # e.g. "Okta", "Azure AD"
+    issuer_url = Column(String(512), nullable=False)
+    client_id = Column(String(255), nullable=False)
+    client_secret_encrypted = Column(Text, nullable=False)
+    domain_allowlist = Column(JSON, nullable=True) # ["company.com"]
+    group_mapping = Column(JSON, nullable=True) # {"admin_group": "admin", "dev_group": "editor"}
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    workspace = relationship("Workspace")
 
 
 class QueryHistory(Base):

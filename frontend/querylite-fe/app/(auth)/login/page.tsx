@@ -4,18 +4,53 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Zap, Loader2, Mail, Lock, Chrome } from "lucide-react";
+import { Zap, Loader2, Mail, Lock, Chrome, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "sonner";
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
+    const [checkingSSO, setCheckingSSO] = useState(false);
+    const [ssoConfig, setSsoConfig] = useState<any>(null);
     const router = useRouter();
+
+    const handleEmailBlur = async () => {
+        if (!email || !email.includes("@")) return;
+        const domain = email.split("@")[1];
+
+        setCheckingSSO(true);
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/sso/discover/${domain}`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data) {
+                    setSsoConfig(data);
+                    toast.info(`Enterprise login available for ${domain}`);
+                } else {
+                    setSsoConfig(null);
+                }
+            }
+        } catch (err) {
+            console.error("SSO discovery failed:", err);
+        } finally {
+            setCheckingSSO(false);
+        }
+    };
+
+    const handleSSOLogin = () => {
+        if (!ssoConfig) return;
+        // In a real generic OIDC flow, we'd trigger NextAuth or redirect to issuer
+        // For this demo/setup, we'll redirect to the issuer's auth endpoint
+        toast.success(`Redirecting to ${ssoConfig.provider_name}...`);
+        // Simulating redirection
+        window.location.href = `${ssoConfig.issuer_url}/authorize?client_id=${ssoConfig.client_id}&response_type=code&scope=openid profile email&redirect_uri=${window.location.origin}/api/auth/callback/oidc`;
+    };
 
     const handleCredentialsLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -98,48 +133,76 @@ export default function LoginPage() {
                                         placeholder="name@example.com"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
+                                        onBlur={handleEmailBlur}
                                         required
                                         className="bg-slate-800/50 border-slate-700 text-white pl-10 focus:ring-violet-500 transition-all h-12"
                                     />
+                                    {checkingSSO && (
+                                        <Loader2 className="absolute right-3 top-3.5 h-4 w-4 text-violet-400 animate-spin" />
+                                    )}
                                 </div>
                             </div>
-                            <div className="space-y-2">
-                                <div className="flex justify-between items-center">
-                                    <Label htmlFor="password" className="text-slate-300">Password</Label>
-                                    <Link href="#" className="text-xs text-violet-400 hover:text-violet-300">Forgot password?</Link>
-                                </div>
-                                <div className="relative">
-                                    <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
-                                    <Input
-                                        id="password"
-                                        type="password"
-                                        placeholder="••••••••"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        required
-                                        className="bg-slate-800/50 border-slate-700 text-white pl-10 focus:ring-violet-500 transition-all h-12"
-                                    />
-                                </div>
-                            </div>
-                            <Button
-                                type="submit"
-                                className="w-full h-12 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20 font-semibold"
-                                disabled={loading}
-                            >
-                                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Sign In"}
-                            </Button>
 
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                className="w-full text-slate-500 hover:text-white hover:bg-slate-800/50"
-                                onClick={() => {
-                                    setEmail("admin@example.com");
-                                    setPassword("password");
-                                }}
-                            >
-                                Use Demo Account
-                            </Button>
+                            {ssoConfig ? (
+                                <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                                    <div className="p-4 rounded-xl bg-violet-600/10 border border-violet-600/20 text-center">
+                                        <p className="text-sm text-slate-300 mb-3">Enterprise account detected for <span className="text-violet-400 font-bold">{ssoConfig.provider_name}</span></p>
+                                        <Button
+                                            onClick={handleSSOLogin}
+                                            className="w-full h-12 bg-violet-600 hover:bg-violet-700 text-white font-bold gap-2"
+                                        >
+                                            <Shield className="h-4 w-4" />
+                                            Sign in with SSO
+                                        </Button>
+                                        <button
+                                            onClick={() => setSsoConfig(null)}
+                                            className="mt-3 text-[10px] uppercase font-bold text-slate-500 hover:text-slate-400"
+                                        >
+                                            Use password instead
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-center">
+                                            <Label htmlFor="password" className="text-slate-300">Password</Label>
+                                            <Link href="#" className="text-xs text-violet-400 hover:text-violet-300">Forgot password?</Link>
+                                        </div>
+                                        <div className="relative">
+                                            <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
+                                            <Input
+                                                id="password"
+                                                type="password"
+                                                placeholder="••••••••"
+                                                value={password}
+                                                onChange={(e) => setPassword(e.target.value)}
+                                                required
+                                                className="bg-slate-800/50 border-slate-700 text-white pl-10 focus:ring-violet-500 transition-all h-12"
+                                            />
+                                        </div>
+                                    </div>
+                                    <Button
+                                        type="submit"
+                                        className="w-full h-12 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-lg shadow-violet-500/20 font-semibold"
+                                        disabled={loading}
+                                    >
+                                        {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Sign In"}
+                                    </Button>
+
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        className="w-full text-slate-500 hover:text-white hover:bg-slate-800/50"
+                                        onClick={() => {
+                                            setEmail("admin@example.com");
+                                            setPassword("password");
+                                        }}
+                                    >
+                                        Use Demo Account
+                                    </Button>
+                                </>
+                            )}
                         </form>
                     </CardContent>
                     <CardFooter className="justify-center border-t border-slate-800 pt-6">

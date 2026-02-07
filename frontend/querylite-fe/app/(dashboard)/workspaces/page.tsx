@@ -49,6 +49,14 @@ export default function WorkspacesPage() {
     const [webhookEnabled, setWebhookEnabled] = useState(false);
     const [isSavingSettings, setIsSavingSettings] = useState(false);
 
+    // SSO settings state
+    const [ssoProvider, setSsoProvider] = useState("Okta");
+    const [ssoIssuer, setSsoIssuer] = useState("");
+    const [ssoClientId, setSsoClientId] = useState("");
+    const [ssoClientSecret, setSsoClientSecret] = useState("");
+    const [ssoDomains, setSsoDomains] = useState("");
+    const [isSsoActive, setIsSsoActive] = useState(true);
+
     const fetchWorkspaces = async () => {
         try {
             const res = await authenticatedFetch("/api/workspaces/");
@@ -87,18 +95,46 @@ export default function WorkspacesPage() {
         }
     };
 
-    const openSettings = (workspace: Workspace) => {
+    const openSettings = async (workspace: Workspace) => {
         setSelectedWorkspace(workspace);
         setWebhookUrl(workspace.webhook_url || "");
         setWebhookEnabled(workspace.webhook_enabled);
+
+        // Fetch SSO Config
+        try {
+            const res = await authenticatedFetch(`/api/sso/${workspace.id}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data) {
+                    setSsoProvider(data.provider_name);
+                    setSsoIssuer(data.issuer_url);
+                    setSsoClientId(data.client_id);
+                    setSsoDomains(data.domain_allowlist?.join(", ") || "");
+                    setIsSsoActive(data.is_active);
+                    // Secret is never sent back in plain text preferably, or we show placeholder
+                    setSsoClientSecret("••••••••");
+                } else {
+                    // Reset
+                    setSsoProvider("Okta");
+                    setSsoIssuer("");
+                    setSsoClientId("");
+                    setSsoClientSecret("");
+                    setSsoDomains("");
+                }
+            }
+        } catch (err) {
+            console.error("Failed to fetch SSO config:", err);
+        }
+
         setIsSettingsOpen(true);
     };
 
-    const handleSaveWebhook = async () => {
+    const handleSaveSettings = async () => {
         if (!selectedWorkspace) return;
         setIsSavingSettings(true);
         try {
-            const res = await authenticatedFetch(`/api/workspaces/${selectedWorkspace.id}/webhook`, {
+            // 1. Save Webhook
+            const webhookRes = await authenticatedFetch(`/api/workspaces/${selectedWorkspace.id}/webhook`, {
                 method: "PATCH",
                 body: JSON.stringify({
                     webhook_url: webhookUrl,
@@ -106,15 +142,31 @@ export default function WorkspacesPage() {
                 }),
             });
 
-            if (res.ok) {
-                toast.success("Webhook settings saved");
+            // 2. Save SSO if fields are filled
+            let ssoRes = { ok: true };
+            if (ssoIssuer && ssoClientId) {
+                ssoRes = await authenticatedFetch(`/api/sso/${selectedWorkspace.id}`, {
+                    method: "POST",
+                    body: JSON.stringify({
+                        provider_name: ssoProvider,
+                        issuer_url: ssoIssuer,
+                        client_id: ssoClientId,
+                        client_secret: ssoClientSecret === "••••••••" ? "" : ssoClientSecret, // Logic to avoid overwriting secret with dots
+                        domain_allowlist: ssoDomains.split(",").map(d => d.trim()).filter(d => d),
+                        group_mapping: {} // Placeholder for group mapping UI
+                    }),
+                });
+            }
+
+            if (webhookRes.ok && ssoRes.ok) {
+                toast.success("All settings saved successfully");
                 setIsSettingsOpen(false);
                 fetchWorkspaces();
             } else {
-                toast.error("Failed to save settings");
+                toast.error("Some settings failed to save");
             }
         } catch (error) {
-            toast.error("Network error");
+            toast.error("Network error saving settings");
         } finally {
             setIsSavingSettings(false);
         }
@@ -228,41 +280,108 @@ export default function WorkspacesPage() {
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="space-y-6 py-4">
-                        <div className="flex items-center justify-between p-4 bg-slate-950/50 border border-slate-800 rounded-xl">
-                            <div className="space-y-1">
-                                <Label className="text-sm font-medium">Enable Outbound Webhooks</Label>
-                                <p className="text-xs text-slate-500">Send notifications to external services on query events.</p>
+                    <div className="space-y-6 py-4 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+                        <section className="space-y-4">
+                            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Outbound Webhooks</h3>
+                            <div className="flex items-center justify-between p-4 bg-slate-950/50 border border-slate-800 rounded-xl">
+                                <div className="space-y-1">
+                                    <Label className="text-sm font-medium">Enable Notifications</Label>
+                                    <p className="text-xs text-slate-500">Send alerts to Slack/Discord.</p>
+                                </div>
+                                <button
+                                    onClick={() => setWebhookEnabled(!webhookEnabled)}
+                                    className={`w-12 h-6 rounded-full transition-colors relative ${webhookEnabled ? 'bg-violet-600' : 'bg-slate-700'}`}
+                                >
+                                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${webhookEnabled ? 'left-7' : 'left-1'}`} />
+                                </button>
                             </div>
-                            <button
-                                onClick={() => setWebhookEnabled(!webhookEnabled)}
-                                className={`w-12 h-6 rounded-full transition-colors relative ${webhookEnabled ? 'bg-violet-600' : 'bg-slate-700'}`}
-                            >
-                                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${webhookEnabled ? 'left-7' : 'left-1'}`} />
-                            </button>
-                        </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="webhook_url" className="text-sm">Webhook URL (Slack, Discord, or Custom)</Label>
-                            <Input
-                                id="webhook_url"
-                                value={webhookUrl}
-                                onChange={(e) => setWebhookUrl(e.target.value)}
-                                placeholder="https://hooks.slack.com/services/..."
-                                className="bg-slate-950 border-slate-800"
-                            />
-                            <p className="text-[10px] text-slate-500 flex items-center gap-1">
-                                <ExternalLink className="h-3 w-3" />
-                                We'll POST JSON payloads to this address for events like 'query_executed' and 'query_saved'.
-                            </p>
-                        </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="webhook_url" className="text-xs text-slate-400">Webhook URL</Label>
+                                <Input
+                                    id="webhook_url"
+                                    value={webhookUrl}
+                                    onChange={(e) => setWebhookUrl(e.target.value)}
+                                    placeholder="https://hooks.slack.com/services/..."
+                                    className="bg-slate-950 border-slate-800 h-10 text-sm"
+                                />
+                            </div>
+                        </section>
+
+                        <div className="border-t border-slate-800 my-2" />
+
+                        <section className="space-y-4">
+                            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Single Sign-On (OIDC)</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label className="text-xs text-slate-400">Provider</Label>
+                                    <select
+                                        value={ssoProvider}
+                                        onChange={(e) => setSsoProvider(e.target.value)}
+                                        className="w-full bg-slate-950 border border-slate-800 rounded-md h-10 px-3 text-sm"
+                                    >
+                                        <option value="Okta">Okta</option>
+                                        <option value="Azure AD">Azure AD / Entra</option>
+                                        <option value="Custom">Custom OIDC</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-xs text-slate-400">Status</Label>
+                                    <div className="flex items-center h-10 px-3 bg-slate-950 border border-slate-800 rounded-md">
+                                        <span className={`h-2 w-2 rounded-full mr-2 ${isSsoActive ? 'bg-emerald-500' : 'bg-slate-600'}`} />
+                                        <span className="text-sm">{isSsoActive ? 'Active' : 'Disabled'}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label className="text-xs text-slate-400">Issuer URL (Discovery Endpoint)</Label>
+                                <Input
+                                    value={ssoIssuer}
+                                    onChange={(e) => setSsoIssuer(e.target.value)}
+                                    placeholder="https://dev-1234.okta.com/oauth2/default"
+                                    className="bg-slate-950 border-slate-800 h-10 text-sm"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label className="text-xs text-slate-400">Client ID</Label>
+                                    <Input
+                                        value={ssoClientId}
+                                        onChange={(e) => setSsoClientId(e.target.value)}
+                                        className="bg-slate-950 border-slate-800 h-10 text-sm"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-xs text-slate-400">Client Secret</Label>
+                                    <Input
+                                        type="password"
+                                        value={ssoClientSecret}
+                                        onChange={(e) => setSsoClientSecret(e.target.value)}
+                                        className="bg-slate-950 border-slate-800 h-10 text-sm"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label className="text-xs text-slate-400">Allowed Email Domains (comma separated)</Label>
+                                <Input
+                                    value={ssoDomains}
+                                    onChange={(e) => setSsoDomains(e.target.value)}
+                                    placeholder="company.com, partner.io"
+                                    className="bg-slate-950 border-slate-800 h-10 text-sm"
+                                />
+                                <p className="text-[10px] text-slate-500 italic">Used for login page auto-discovery.</p>
+                            </div>
+                        </section>
                     </div>
 
                     <DialogFooter>
                         <Button variant="ghost" onClick={() => setIsSettingsOpen(false)}>Cancel</Button>
                         <Button
                             className="bg-violet-600 hover:bg-violet-700"
-                            onClick={handleSaveWebhook}
+                            onClick={handleSaveSettings}
                             disabled={isSavingSettings}
                         >
                             {isSavingSettings ? "Saving..." : "Save Settings"}

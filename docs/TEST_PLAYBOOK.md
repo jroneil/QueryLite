@@ -128,6 +128,32 @@ Verify that all services are healthy:
 1. (Manual Trigger) Ask a query that might cause a minor ambiguity, e.g., `"Show address for actors"`.
 2. **Expected**: If the first attempt fails (e.g. joining `actor` to `address` requires `customer` or `staff`), look for the **"Self-Healed"** banner indicating the AI corrected the join logic.
 
+### 4.3 Data Lineage & Impact Analysis
+1. Navigate to **Intelligence → Lineage**.
+2. Select your `Analytics DB` data source.
+3. **Expected**: A graph visualization showing tables connected to your saved queries.
+4. In the **Impact Analysis** section, enter a table name (e.g., `film`).
+5. Click **"Analyze"**.
+6. **Expected**: A list of affected saved queries and dashboard panels that reference that table.
+
+### 4.4 GDPR Compliance Console
+1. Navigate to **Admin → Compliance**.
+2. Click **"Create Request"** and enter a test email (e.g., `testuser@example.com`).
+3. **Expected**: A new pending deletion request appears in the list.
+4. Click **"Execute"** on the pending request.
+5. **Expected**: Status changes to "Completed" and an audit log entry is created.
+
+### 4.5 Column-Level Permissions (API Test)
+Column permissions are configured via API. Test with:
+```bash
+# Create a masking rule (hide the 'email' column for viewers)
+curl -X POST "http://localhost:8000/api/column-permissions/{data_source_id}" \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"column_name": "email", "restricted_roles": ["viewer"], "mask_strategy": "hide"}'
+```
+**Verification**: Run a query as a viewer role user; the `email` column should not appear in results.
+
 ---
 
 ## 🏢 5. Enterprise Connector Testing (Cloud Services)
@@ -155,4 +181,4 @@ Cloud warehouses (BigQuery, Snowflake) cannot be fully "mocked" without real inf
 - **Email not sending?** Ensure the `backend` environment variable `SMTP_HOST` is set to `mailhog`.
 
 ---
-*Created by QueryLite AI Orchestrator - Phase 8.1 Build*
+*Created by QueryLite AI Orchestrator - Phase 10 Governance & Lineage Build*

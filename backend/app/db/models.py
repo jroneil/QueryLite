@@ -389,3 +389,55 @@ class SchemaEmbedding(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     data_source = relationship("DataSource")
+
+
+# =============================================================================
+# Phase 10: Data Governance & Compliance Models
+# =============================================================================
+
+
+class DataLineageEdge(Base):
+    """Model for tracking data lineage relationships between schema elements and queries/dashboards"""
+    __tablename__ = "data_lineage_edges"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    data_source_id = Column(UUID(as_uuid=True), ForeignKey("data_sources.id"), nullable=False)
+    source_type = Column(String(50), nullable=False)  # table, column
+    source_name = Column(String(255), nullable=False)
+    target_type = Column(String(50), nullable=False)  # saved_query, dashboard_panel
+    target_id = Column(UUID(as_uuid=True), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    data_source = relationship("DataSource")
+
+
+class DeletionRequest(Base):
+    """Model for GDPR/CCPA Right to be Forgotten requests"""
+    __tablename__ = "deletion_requests"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_email = Column(String(255), nullable=False, index=True)
+    status = Column(String(50), default="pending")  # pending, processing, completed, failed
+    requested_by_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    audit_log_id = Column(UUID(as_uuid=True), ForeignKey("audit_logs.id"), nullable=True)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+
+    requested_by = relationship("User")
+    audit_log = relationship("AuditLog")
+
+
+class ColumnPermission(Base):
+    """Model for column-level access control and masking rules"""
+    __tablename__ = "column_permissions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    data_source_id = Column(UUID(as_uuid=True), ForeignKey("data_sources.id"), nullable=False)
+    column_name = Column(String(255), nullable=False)
+    restricted_roles = Column(JSON, default=[])  # ["viewer", "editor"]
+    mask_strategy = Column(String(50), default="hide")  # hide, redact_partial, hash
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    data_source = relationship("DataSource")

@@ -4,6 +4,8 @@ Query router - Natural language to SQL endpoint
 
 import logging
 import traceback
+
+logger = logging.getLogger(__name__)
 from typing import List
 from uuid import UUID
 
@@ -69,6 +71,9 @@ async def execute_natural_language_query(
         workspace_id=str(data_source.workspace_id) if data_source.workspace_id else None,
         details={"question": request.question, "data_source_id": str(data_source.id)}
     )
+
+    requires_heal_flag = False
+    original_error_msg = None
 
     try:
         # Simplified Factory Logic: Pass config for all types
@@ -138,7 +143,8 @@ async def execute_natural_language_query(
             schema_info, 
             table_names, 
             conversation_history,
-            db_type=data_source.type
+            db_type=data_source.type,
+            data_source_id=data_source.id
         )
         if not sql_result.sql_query:
             raise HTTPException(status_code=400, detail=f"LLM Error: {sql_result.explanation}")
@@ -222,7 +228,39 @@ async def execute_natural_language_query(
             
             return QueryResponse(**response_template)
 
-        results, execution_time = executor.execute_query(sql_result.sql_query)
+        try:
+            results, execution_time = executor.execute_query(sql_result.sql_query)
+        except Exception as e:
+            # Phase 8.3: Self-Healing Logic
+            error_msg = str(e)
+            logger.warning(f"Query failed, attempting self-healing: {error_msg}")
+            
+            from app.services.query_healer import query_healer
+            fixed_sql, fix_explanation = query_healer.heal_query(
+                request.question,
+                sql_result.sql_query,
+                error_msg,
+                schema_info,
+                db_type=data_source.type
+            )
+            
+            if fixed_sql and fixed_sql != sql_result.sql_query:
+                try:
+                    logger.info(f"Retrying with fixed SQL: {fixed_sql}")
+                    results, execution_time = executor.execute_query(fixed_sql)
+                    
+                    # Update sql_result so the rest of the logic uses the fixed query
+                    sql_result.sql_query = fixed_sql
+                    sql_result.explanation = f"Query was automatically fixed. Original error: {error_msg}. \n\nFix: {fix_explanation}"
+                    
+                    # Mark as healed in response
+                    requires_heal_flag = True 
+                    original_error_msg = error_msg
+                except Exception as retry_err:
+                    logger.error(f"Self-healing failed: {str(retry_err)}")
+                    raise HTTPException(status_code=400, detail=f"Query failed and could not be auto-fixed. Error: {error_msg}")
+            else:
+                raise HTTPException(status_code=400, detail=f"Database Error: {error_msg}")
         
         # Apply PII Masking
         settings = get_settings()
@@ -290,7 +328,9 @@ async def execute_natural_language_query(
             row_count=len(results),
             chart_recommendation=chart_recommendation,
             execution_time_ms=execution_time,
-            confidence=sql_result.confidence
+            confidence=sql_result.confidence,
+            is_healed=requires_heal_flag,
+            original_error=original_error_msg
         )
 
         # Final audit log update with execution time

@@ -18,6 +18,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+from pgvector.sqlalchemy import Vector
 
 from app.db.database import Base
 
@@ -356,3 +357,18 @@ class DataAnomalyAlert(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     saved_query = relationship("SavedQuery", back_populates="anomalies")
+
+
+class SchemaEmbedding(Base):
+    """Model for storing vector embeddings of schema elements"""
+    __tablename__ = "schema_embeddings"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    data_source_id = Column(UUID(as_uuid=True), ForeignKey("data_sources.id"), nullable=False)
+    element_type = Column(String(50), nullable=False) # table, column
+    name = Column(String(255), nullable=False)
+    embedding = Column(Vector(1536), nullable=False) # OpenAI text-embedding-3-small uses 1536 dims
+    metadata_json = Column(JSON, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    data_source = relationship("DataSource")

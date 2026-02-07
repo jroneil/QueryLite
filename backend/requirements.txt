@@ -29,3 +29,4 @@ pymongo==4.10.1
 numpy==2.1.2
 google-cloud-bigquery==3.25.0
 snowflake-connector-python==3.12.0
+pgvector==0.3.6

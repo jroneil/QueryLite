@@ -44,7 +44,8 @@ class LLMService:
         schema_info: str,
         table_names: list[str],
         conversation_history: Optional[List[dict]] = None,
-        db_type: str = "postgresql"
+        db_type: str = "postgresql",
+        data_source_id: Optional[Any] = None
     ) -> SQLGenerationResult:
         """
         Generate a SELECT query from natural language question.
@@ -52,7 +53,31 @@ class LLMService:
         if not self._provider:
             self._set_provider()
             
-        return self._provider.generate_sql(question, schema_info, table_names, conversation_history, db_type)
+        # Phase 8.1: Semantic Context Filtering
+        filtered_schema = schema_info
+        filtered_tables = table_names
+        
+        if data_source_id:
+            from app.services.semantic_search import semantic_search
+            # Find top relevant tables
+            relevant_tables = semantic_search.get_relevant_table_names(question, data_source_id, top_k=5)
+            
+            if relevant_tables:
+                # Filter schema_info to only include relevant tables
+                # Most schema_info strings are blocks separated by double newlines per table
+                schema_blocks = schema_info.split("\n\n")
+                filtered_blocks = []
+                for block in schema_blocks:
+                    # Check if the block mentions a relevant table (case-insensitive)
+                    if any(f"Table: {t.lower()}" in block.lower() for t in relevant_tables):
+                        filtered_blocks.append(block)
+                
+                if filtered_blocks:
+                    filtered_schema = "\n\n".join(filtered_blocks)
+                    filtered_tables = relevant_tables
+                    print(f"Semantic search reduced schema from {len(schema_blocks)} to {len(filtered_blocks)} tables")
+
+        return self._provider.generate_sql(question, filtered_schema, filtered_tables, conversation_history, db_type)
     
     def validate_sql(self, sql: str, db_type: str = "postgresql") -> tuple[bool, str]:
         """

@@ -25,6 +25,11 @@ No SQL knowledge required. Just ask, and see your data come to life.
 - **Authentication**: Secure login with NextAuth.js and OAuth providers.
 - **Multi-Tenancy**: Private workspaces for users to manage their own data sources.
 - **Query History**: Automatically track and re-run past queries.
+
+### Phase 8: AI Augmentation (Completed ✅)
+- **Semantic Search**: Vector embeddings (pgvector) for schema filtering to improve LLM accuracy on massive databases. ✅
+- **Query Suggestions**: Real-time natural language autocomplete based on successful query patterns. ✅
+- **Self-Healing Queries**: Automated error correction; retries failed queries with LLM-suggested fixes. ✅
 - **Saved Queries**: Bookmark favorite insights for quick access.
 - **Export**: Export data to CSV.
 
@@ -93,6 +98,13 @@ No SQL knowledge required. Just ask, and see your data come to life.
 - **Trend Forecasting**: Predictive modeling and future projections for time-series data ✅
 - **Data Discovery**: Automated "Smart Findings" feed to surface interesting data patterns ✅
 - **Forecasting Overlays**: One-click predictive visualization in Ask and Dashboard views ✅
+ 
+ ### Phase 8: AI Augmentation (Completed ✅)
+- **Semantic Search**: Vector embeddings (pgvector) for schema filtering to improve LLM accuracy on massive databases. ✅
+- **Query Suggestions**: Real-time natural language autocomplete based on successful query patterns. ✅
+- **Self-Healing Queries**: Automated error correction; retries failed queries with LLM-suggested fixes. ✅
+- **Saved Queries**: Bookmark favorite insights for quick access.
+- **Export**: Export data to CSV.
 
 ---
 
@@ -122,6 +134,7 @@ Interested in adding another database? See our [Connector Contribution Guide](do
 
 - Docker and Docker Compose
 - OpenAI or Anthropic API key (optional, for NL-to-SQL feature)
+- **Playbook**: See [Testing & Verification Playbook](docs/TEST_PLAYBOOK.md) for a full walkthrough.
 
 ### 2. Setup & Launch
 

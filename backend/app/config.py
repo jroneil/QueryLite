@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     redis_host: str = "redis"
     redis_port: int = 6379
     
+    # Vector Search
+    vector_store: str = "pgvector" # pgvector | qdrant
+    qdrant_url: str = ""
+    qdrant_api_key: str = ""
+    
     class Config:
         env_file = ".env"
         case_sensitive = False

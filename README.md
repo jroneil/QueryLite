@@ -1,11 +1,31 @@
-# QueryLite
+## QueryLite – Enterprise-Grade AI Analytics (Open Source)
+
+QueryLite is a **reference implementation** for building AI-assisted analytics systems
+with security, auditability, and compliance as first-class concerns.
+
+---
+
+## What QueryLite Looks Like
+
+### Natural Language → SQL → Dashboards
+![Talk to your data](docs/images/querylite-ask.png)
+
+### Proactive Intelligence & Anomaly Detection
+![Monitoring anomalies](docs/images/querylite-intelligence.png)
+
+### GDPR / CCPA Compliance Workflows
+![Compliance workflows](docs/images/querylite-compliance.png)
+
 ## Consulting & Integration
 
-QueryLite is intentionally open source and can be used as a reference or starting point.
-I also offer consulting to help teams adapt these patterns to their existing systems,
-including governance, auditing, and safe analytics access.
+QueryLite is an open-source reference implementation focused on exploring
+governance, auditing, and safe analytics workflows.
 
-This is not a hosted service.
+It is intended as a learning and discussion artifact, built with the assistance
+of AI, rather than a drop-in enterprise solution.
+
+QueryLite is not offered as a hosted service.
+
 
 > **Turn natural language into insights.** Connect your PostgreSQL database and ask questions in plain English—QueryLite generates the SQL, runs it, and visualizes the results automatically.
 
